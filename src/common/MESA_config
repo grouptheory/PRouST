@@ -1,0 +1,23 @@
+# GL_ROOT is the location of OpenGL/Mesa
+ifeq (${IRIX},IRIX)
+  GL_ROOT = /usr
+else
+  GL_ROOT =
+endif
+
+# Where the OpenGL include files can be found
+GL_INC  = ${GL_ROOT}/include
+
+# Where the OpenGL libs can be found
+ifeq (${IRIX},IRIX)
+  GL_LIB  = ${GL_ROOT}/lib32
+else
+  GL_LIB  = ${GL_ROOT}/lib
+endif
+
+ifeq (${IRIX},IRIX)
+  GL_LIBS = -lglut -lGLU -lGL
+else
+  GL_LIBS = -lMesaGL -lMesaGLU -lglut
+endif
+

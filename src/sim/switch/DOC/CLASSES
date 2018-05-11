@@ -1,0 +1,63 @@
+Updated: June 2, 1997
+There are some changes in this version.  Mostly, I have changed class
+names and file names for the sake of clarity.  The chart below
+indicates the changes.
+
+Old				Old			New			New
+Class				File			Class			File
+-----				----			-----			----
+
+					ACCESSORS
+PortAccessor			OurAccessors.h					PortAccessor.h
+Switch uses it to select a port
+
+PortMuxAccessor			PortMuxAccessor.h	VPVCAccessor		VPVCAccessor.h
+port uses it to select a vc/protocol
+
+
+					CREATORS
+PTPCreator			OurCreators.h		*removed*
+
+PortCreator			OurCreators.h					PortCreator.h
+switch uses it to create ports
+
+PortProtocolCreator		PortProtocolCreator.h	VPVCCreator		VPVCCreator.h
+Addes a VPVC to a port
+
+
+					EXPANDERS
+Port				OurExpanders.h		*removed*
+
+Switch				OurExpanders.h		SwitchExpander		SwitchExpander.h
+Models a switch
+
+SwitchPortExpander		SwitchPortExpander.h	PortExpander		PortExpander.h
+Models a port of a switch.  Used by PortCreator.
+
+
+					STATES
+NullState			OurStates.h					NullState.h
+
+
+					TERMINALS
+DebugTerminal			OurTerminals.h					DebugTerminal.h
+
+
+					VISITORS
+PortInstallerVisitor		OurVisitors.h		PortInstallerVisitor	PortInstallerVisitor.h
+Makes a switch create a port.
+
+PortVisitor			PortVisitors.h					PortVisitor.h
+Carries something to a port
+
+PortProtocolVisitor		PortVisitors.h		PortProtocolVisitor	PortProtocolVisitor.h
+carries a control message into a port
+
+PortProtocolAddVPVCVisitor	PortVisitors.h		VPVCInstallerVisitor	VPVCInstallerVisitor.h
+Adds a vpvc/protocol to a port
+
+PortProtocolDeleteVPVCVisitor	PortVisitors.h		VPVCUninstallerVisitor	VPVCUninstallerVisitor.h
+Removes a vpvc/protocol from a port
+
+PortDataVisitor			PortVisitors.h					PortDataVisitor.h
+Carries a data (non-control) message into a port

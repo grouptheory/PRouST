@@ -1,0 +1,1192 @@
+Version: $Id: README,v 1.17 1999/02/17 15:09:35 talmage Exp $
+
+				Foreword
+
+
+Naming:	Pending submissions of more language names and a vote by the
+	signaling group, the name of this language is 'Fate'.  It allows
+        us to specify the fate of an ATM network that is to be simulated.
+
+Where:	sim/fate (Currently pnni/dev/mountcas/sim/fate)
+
+Files:	FC - the fate to c++ translator
+	compile.sh - the compilation script
+	parse.sh - handles the parsing and compilation of Fate scripts.
+
+How to use it:
+
+	Now there is a handy script in sim/fate called run.sh which
+	will generate an executable from your script, just provide the
+	name of the script.  If you have written a script called 
+	convergence.fc then you would:
+
+		parse.sh convergence[.fc]
+
+	NOTE: It is best to sit in the examples subdirectory and use
+	parse.sh <script> since the script makes a hidden
+	subdirectory (if it doesn't already exist) and leaves several
+	files behind.
+
+	Write your Fate script, then run fc on your program as follows
+
+	  fc < program_file.fc OR parse.sh program_file[.fc]
+	  
+	If the name of your program (specified in the program header)
+	is foo, the above act will output a file tmp_foo.cc
+	
+	tmp_foo.cc can be modified by you if you like, and
+	it may then be compiled by running 
+	
+	  compile.sh foo.cc
+
+	This will compile tmp_foo.cc and output a binary 'foo'.
+	It also generates a makefile named .Makefile.$USER, where
+	$USER is your username.
+
+Note from the author:
+
+In the beginning you may find it necessary to modify tmp_foo.cc in
+order to accomplish exactly what you intended.  Do this, and send
+either of us a note regarding your view on the shortcomings of the
+language constructs.  We will try and extend the language in a some
+way to resolve your concern; though We may not be able to do this in
+very short order.  Finally, when your requests die down to a murmur, I
+will wrap the gnu C++ compiler into the fc binary and get rid of the
+compile.sh script.  I have tried to include all of the obvious needs
+in a high-level network scenario language: set operations on
+collections of switches or links, random selection from sets,
+arbitrary time sequences, loops over sets, procedures, random
+conditionals, and others.
+
+					Bilal/Sean
+
+
+Using Fate:
+
+	From the examples subdirectory inside sim/fate you can compile
+your script with the command ../run.sh script, this will parse,
+compile and link your script, outputting script_SunOS (or whatever
+uname -s outputs).  The program can be debugged under gdb like any
+other, the only argument to the generated binary is the filename for
+visualization output (input for GT).
+
+
+Manual:
+
+		FC -- The Fate Language compiler for PRouST
+
+
+0. Table of Contents
+
+   0. Table of Contents
+   I. Overview
+      I.A  General Structure of Fate Programs
+  II. Program Header
+ III. Includes
+  IV. Declarations in General
+   V. TimeSeq
+  VI. Groups
+      VI.A Declaring Groups
+      VI.B  Manipulating Groups
+ VII. Selectors
+      VII.A  Declaring Selectors
+      VII.B  Evoking a Selector
+VIII. Plugins and Libraries
+  IX. Procedures
+      IX.A.  Atomic Actions
+	*** Group Manipulations
+	*** Selector Evocation
+	*** Birth of Switches
+	*** Death of Switches
+	*** Birth of Links
+	*** Death of Links
+	*** Injection of Visitors
+	*** Execution of External Programs
+	*** Probabilistic Conditionals
+	*** Loops Over Groups
+   X.  Verbatim text
+  XI.  Body
+ XII.  Example Programs
+
+
+
+---------------------------------------------------------------------
+I. Overview
+
+FC is a translator/compiler for the 'Fate' language used to test
+elaborate ATM network scenarios with PRouST.  The 'Fate' language
+builds on its primitive predecessor known as 'ScenarioBuilder'.
+
+
+I.A  General Structure of Fate Programs
+
+Every Fate program has three basic components in the following order.
+
+	Configuration File
+	Includes
+	Declarations of TimeSeqs
+	Declarations of Groups
+	Declarations of Selectors
+	Procedure Definitions
+	Main Body
+
+We treat each of these below, in turn.
+
+---------------------------------------------------------------------
+II.  Configuration File
+
+The first non-comment line of any program names the configuration
+file.  When the program is run, it loads the switch, link, and call
+configurations defined in that file or in the configuration file named
+on the command line (if one is given).  The command line takes
+precedence over the one compiled into the program.
+
+
+	configuration <configuration file>;
+
+
+where <configuration file> is the name of the file.  It must be
+surrounded by double quotes.  E.g.
+
+	configuration "SwitchConfiguration";
+
+---------------------------------------------------------------------
+III.  Includes
+
+An include is an fc directive indicating that the final compilation of
+this file will require some other file.  Fate has several open-ended
+features. For example, one can trigger the injection of arbitrary
+visitors (defined externally) into a switch.  In order for these
+visitors to be constructed one would need to include the C++ header
+files so that the fc can find the appropriate definitions.  The form
+of an include statement is:
+
+	#include <dir/dir/file.ext>
+
+---------------------------------------------------------------------
+
+IV.  Declarations in General
+
+Variables can be given names consisting of any alphanumeric string or
+characters, including the character underscore.  They may not begin
+with a number and are truncated internally to a maximum of 15
+characters in length.
+
+Fate is a typed language supporting local and global scoping.
+The following types of global variables are supported:
+
+	group
+	timeseq
+	selector
+
+Variables of these types must be declared before any procedures are
+defined; the declared variables can then be referred to inside of any
+procedure.  There is no implicit declaration in fate; all global
+variables must be explicitly declared.  Since all the global variables
+occupy a single global name space, no two global variables can have
+the same name even if they are of different types, or a compile error
+will result.
+
+In addition, Fate supports declaration of local variables
+of the following types:
+
+	switch
+	link
+
+Variables of these types can only be declared inside of a procedure.
+Their scope is restricted to the context of the procedure.  Two
+different procedures may thus use local variables with the same name.
+The local variables of any given procedure inhabit a single local name
+space, so they cannot have the same name even if they are of different
+types, or a compile error will result.  Also, if the name of a local
+variable coincides with the name of a global variable, a compile-time
+error will result.
+
+NOTE: Even though Fate allows if statements and iterative loops the
+way C++ does, the variables declared inside such blocks continue to
+persist outside the block!
+
+For example (the specific constructs are described later):
+
+	proc func {
+	 if (0.5) {
+	   switch me = birth switch ("me_key");
+	 }
+	 death switch me;
+	}
+
+This is valid code.  Note the following:
+* the variable me does not fall out of scope after 
+  the closing brace of the if block.  
+* accessing the variable me before its declaration
+  in the 'switch me = ...' line would cause a 
+  compile error.
+
+* "me_key" is the name of a switch configuration in some 
+  configuration file.
+
+---------------------------------------------------------------------
+
+V.  TimeSeq
+
+A timeseq is a specific sequence of discrete points in time.  The
+specification of this sequence may be explicit, or parametric.  The
+following types of sequences are currently supported:
+
+	periodic
+	uniform
+	explicit
+	poisson
+
+
+V.A  Declaring TimeSeqs
+
+A declaration of a timeseq looks like
+
+	timeseq <timeseq_name> = [periodic| ( comma-separated parameters) ;
+				  uniform |
+				  poisson |
+				  explicit]
+
+For periodic, uniform and poisson sequences:
+The first two parameters are always the start and end time of the
+timeseq.  
+
+For a periodic sequence the third parameter is the period.
+For a uniform sequence the third parameter is the size of the interval
+	to uniformly distribute over.
+For explicit timeseqs: the parameters are an explicit list of times.
+For poisson timeseqs: the third parameter is the intensity ( 1.0 - 8.0
+	should produce intervals <= 150 seconds).
+
+For example
+
+	timeseq every1sec = periodic(0, 100, 1);
+	timeseq roughly1persec = uniform(0, 100, 10);
+	timeseq primetime = explicit(2, 3, 5, 7, 11, 13, 17);
+	timeseq poissontime = poisson(0, 100, 2.0);
+
+---------------------------------------------------------------------
+
+VI.  Groups
+
+Fate supports defining of groups.  A group is a collection of
+primitive objects--currently links and switches are the only ones
+supported.  
+
+VI.A  Declaring Groups
+
+Declaration of a group follows the form:
+
+	group <name> = { [switch|link] };
+
+Thus, the two lines
+
+	group lan1 = { switch };
+	group links1 = { link };
+
+have the effect of declaring lan1 to be a switch group and links1 to
+be a link group.  Fate does not support the creation of heterogeneous
+groups.
+
+VI.B  Manipulating Groups
+
+One can add and remove members from groups.  Adding a new member to a
+group is accomplished by using the += operator, and removing a member
+is accomplished by using the -= operator.  These operations take the
+form:
+	group <group_name> += <component_name> ;
+	group <group_name> -= <component_name> ;
+
+For example we might add switch3 to group lan1 and remove fiber_1_2
+from group links1 as follows:
+
+	group lan1 += switch3;
+	group links1 -= fiber_1_2;
+
+NOTE: the above two lines are not group declarations.  Groups must be
+declared globally prior, as specified in VI.B.
+
+Fate is robust against events such as the adding a switch that is
+already a member of a group to the group, or attempting to remove a
+switch that is is not a member of a group from a group.  In such cases
+no action is taken, but a warning message is printed at run-time.
+
+If, however, a program attempts to add/remove a switch from a group of
+links, (or add/remove a link from a group of switches) a compile-time
+error will be generated.
+
+In addition to adding and removing single members, one can clear all
+the members of a group by using the 'clear' directive which takes the 
+form
+	group <group_name> clear;
+
+So to clear the group lan1 of all its members we might write
+
+	group lan1 clear;
+
+---------------------------------------------------------------------
+
+VII  Selectors
+
+A selector is a generic language-level object used for selecting from
+a system of groups.  By 'system of groups' we mean any propositional
+logic expression that describes which groups we are and are not
+interested in.  Fate requires that this systems of groups be
+represented in disjunctive normal form.
+
+VII.A  Declaring Selectors
+
+Please make note of the phrases "IN THE FINAL VERSION" and "IN THE
+CURRENT VERSION", wherever they appear in this section.
+
+A selector consists of two parts:
+
+(part 1) parameters for the selection mechanism. 
+  There is currently only one parameter for the selection
+  mechanism, namely the locality parameter (and it
+  is not yet supported).  
+
+(part 2) a system of groups from which the mechanism will make its choice.
+  To specify a system of groups from which the mechanism will make its
+  choice, you must specify a disjunctive normal form expression of
+  groups.
+
+  In general the DNF expression looks like
+
+	[ CNF || CNF ... || CNF ]
+
+  and each CNF subexpression looks like
+
+	( LITERAL && LITERAL ... && LITERAL )
+
+  and each LITERAL looks like
+
+	<group_name>    
+  or
+	! <group_name>
+
+  All the groups in a DNF expression must be of the same type
+  (they must either be all groups of switches, or else all
+  groups of links), otherwise a compile error will result.
+
+  So, for example, If lan1, dead, lan2, living, and eager_to_please
+  were the names of groups of switches, then the following is an
+  example of a disjunctive normal form expression on these groups:
+
+     [ (lan1 && !dead) || (lan2 && !living) || (eager_to_please) ]
+
+  An example declaration of a selector (IN THE FINAL VERSION)
+
+	selector selfrom1 = (0.0) [ (lan1) ];
+
+  which implies that selfrom1 will act as a selector that will obtain a
+  random member from the group lan1; since lan1 is a group of switches,
+  selfrom1 will select a random switch from the group lan1.  NOTE:
+  it is possible that a selector will not be able to make a non-null
+  selection; this can happen if the group system happens to be empty.
+  As an example consider a selector that is asked to choose between
+  (lan1 && !lan1).  In such circumstances the selector will be unable
+  to make a non-null selection at runtime.
+
+  Even though the locality parameter is currently ignored, I give a
+  brief description of what it signifies.  If the locality parameter is
+  0.0 this means "uniformly random" selection.  in other words every
+  element in the group system is equally likely to be chosen,
+  independently of the previous choice.  If the locality parameter is
+  negative it means "local" selection.  In other words members of the
+  group that are nearer the last choice are more likely to be selected.
+  A positive number for locality means "anti-local" selection,
+  i.e. members of the group that are farther from the last choice are
+  more likely to be selected.  
+
+  Probability x is chosen now, given that y was chosen last time =
+
+                       locality
+               dist(x,y)
+           ----------------------------
+              ---
+              \            locality
+              /    dist(x,y)
+              ---
+             all x 
+           in group
+
+
+  Currently, all selections take place as though the locality parameter
+  was 0.0.  Because locality is not yet supported, an example declaration
+  of a selector (IN THE CURRENT VERSION) looks like:
+  An example declaration of a selector (IN THE FINAL VERSION)
+
+	selector selfrom1 = [ (lan1) ];
+
+
+
+
+VII.B  Evoking a Selector
+
+  Selectors may be evoked inside of procedures to obtain a random member
+  from a system of groups and place the chosen member into a local variable.  
+  The general form is
+
+	switch <switch_name> = choose <selector_name> ;
+
+  if <selector_name> refers to a group system of switch groups.
+  or
+
+	link   <link_name>   = choose <selector_name> ;
+
+  if <selector_name> refers to a group system of link groups.
+  For example we might write inside of a procedure, the line
+
+	switch next_victim = choose selfrom1 ;
+
+---------------------------------------------------------------------
+
+VIII.  Plugins and Libraries
+
+PRouST has the ability to link with C function libraries at run-time
+to override the built-in routing, call admission, and aggregation
+policies.  The plugin declaration is the first part of Fate's
+interface to that run-time linking ability.  The second part is
+documented section IX.A "Birth of Switches".  If you wish to write
+your own plugins, please read the documentation in
+<sim/plugin/Plugin.h> and in the sample plugin
+<sim/plugin/PluginTest.h>
+
+By convention, there are up to three C functions in a plugin library.
+One of them allocates objects that decide whether to admit calls or not.  
+
+   extern "C" ACACPolicy * <name>ACACPolicyConstruct(void):
+
+For an explanation of the ACACPolicy class, please refer to the
+documentation in <sim/acac/ACACPolicy.h>.
+
+
+Another allocates objects that aggregate or summarize topology
+information.
+
+   extern "C" AggregationPolicy * <name>AggregationPolicyConstruct(void);
+
+
+For an explanation of the AggregationPolicy class, please refer to the
+documentation in <sim/aggregator/AggregationPolicy.h>.
+
+Another allocates objects that compute routes.
+
+   extern "C" BaseLogos * <name>LogosConstruct(Logos *logos);
+
+For an explanation of the BaseLogos class, please refer to the
+documentation in <sim/logos/BaseLogos.h>.
+
+In each case above, <name> is the shorthand name or "plugin prefix" of
+the collection of policy allocator functions.  It is used in the
+creation of switches (see IX.A "Birth of Switches") to refer to the
+functions in a particular plugin library.
+
+If one of the allocator functions is missing from a plugin library,
+the resulting Fate program uses the built-in allocator instead.
+
+To prepare to use plugin library functions, you must first associate
+the plugin functions' prefix with the library in which the functions
+reside.  There are three ways to do this.
+
+     plugin <name>;
+
+Associates the plugin prefix <name> with a library named libname.so.
+For example,
+
+     plugin Freds;
+
+The functions FredsACACPolicyConstruct(),
+FredsAggregationPolicyConstruct(), and FredsLogosConstruct() live in
+libFreds.so.
+
+
+     plugin <name> = "path";
+
+Associates the prefix <name> with the library "path".  Note the double
+quotation marks.  They are significant.  Single quotes are not allowed
+here.
+
+E.g. plugin Marys = "/home/mary/lib/libMarysPlugins.so.0.0";
+
+MarysACACPolicyConstruct(), MarysAggregationPolicyConstruct(), and
+MarysLogosConstruct() live in /home/mary/lib/libMarysPlugins.so.0.0
+
+
+
+     plugin <name1> = <name2>;
+
+Associates the prefix <name1> with a library whose name is the value
+of the preprocessor symbol <name2>.  <name2> must be defined on the
+C++ compiler command line.
+
+E.g. plugin Davids = DAVIDS_CHANGING_LIBRARY_PATH;
+
+DAVIDS_CHANGING_LIBRARY_PATH can vary at compile time.  This is useful
+when you must compile the Fate program on several different
+architectures.  By changing DAVIDS_CHANGING_LIBRARY_PATH in the
+Makefile, you need not disturb the source file.
+
+
+Fate scripts can name other libraries to link with.  This is useful in
+conjunction with the verbatim C++ code feature described in Section X.
+The syntax is
+
+  library <library_name>;
+
+where <library_name> is the complete name of the library as
+appropriate for your operating system.  For example, to link with
+libFoo_SunOS5.so:
+
+  library libFoo_SunOS5.so;
+
+
+The Fate compiler writes the name of each library to a file in the
+current directory.  The name of the file is the base name of the
+script file with the suffix ".lib".  The compile.sh script creates a
+makefile that knows about the libraries named in this file.  For
+example, when the current directory is "foo" and you compile
+"../bar/script.fc", the Fate compiler creates "foo/script.lib".
+
+IX.  Procedures
+
+Procedures are sequential lists of atomic actions.  The form of a
+procedure is:
+
+  proc <procedure_name> {
+    atomic_statement1;
+    ...
+    atomic_statementN;
+  }
+
+The local bindings in a procedure are lost upon exit from the
+procedure.  Fate does not support static variable declarations inside
+of procedures.  Any state that needs to be maintained between
+successive procedure calls must be encoded into global variables, in
+particular group variables.
+
+If you wish to call a procedure from a verbatim C/C++ block of code
+you must prepend internal_ to the name of the procedure.  Thus proc
+foo { } becomes internal_foo when referred to via native C/C++ code.
+
+
+IX.A.  Atomic Actions
+
+The following major types of atomic actions are supported:
+	
+	Group Manipulations
+	Selector Evocation
+	Birth of Switches
+	Birth of Links
+	Death of Switches
+	Death of Links
+	Injection of Visitors
+	Execution of External Programs
+	Probabilistic Conditionals
+	Loops Over Groups
+	Output Settings
+	Instantiation of I/O Streams
+
+	--not yet supported--
+	Suspension and resumption of switches and links
+
+
+We briefly describe each in turn
+
+*** Group Manipulations
+
+One can add or remove members from a group, or 
+clear the contents of a group as follows:
+
+  group <group_name> += <switch_name> ;
+  group <group_name> -= <switch_name> ;
+  group <group_name> += <link_name> ;
+  group <group_name> -= <link_name> ;
+  group <group_name> clear ;
+
+For details see the prior section on Groups.
+
+
+*** Selector Evocation
+
+One may randomly  a member from a group system
+using a selector:
+
+  switch <switch_name> = choose <selector_name> ;
+  link <link_name> = choose <selector_name> ;
+
+If selector_name refers to a group system that is empty, then the
+choose operation will result in assigning "null" to the local
+switch/link variable.
+
+For details, see the prior section on Selectors.
+
+
+*** Birth of Switches
+One may create switches
+
+  switch <switch_name> = birth switch (<switch_key>[, <peer_group>]);
+
+where
+
+  <switch_key> is the name of a switch configuration in a
+configuration file.  It is a string of characters surrounded by double
+quotes.  E.g. "Fred", "001PeerGroupSwitch"
+
+  <peer_group> is the first 14 octets of the node id of the switch.
+It is a mixture of decimal and hexidecimal numbers represented by
+characters.  <peer_group> begins with a decimal number that is the
+physical level of the node.  It must be a non-negative integer less
+than or equal to 160.  The level is followed by a colon (':') and 26
+characters representing the 13 octets of peer group identifier
+information.  An example of <peer_group> is
+
+	96:47000580ffde00000000002200
+
+
+The switch will have the characteristics of the switch configuration
+whose name matches <switch_key>.  The node id of the switch will be
+the same as the base node id of the switch configuration with the 14th
+octet set to a value that makes the node id unique.  If the
+<peer_group> is specified, then the base node id of the switch will be
+modified to match that of the <peer_group> and the 14th octet will be
+modified as above.
+
+CURRENTLY, FATE IMPOSES A LIMIT OF 255 NODES PER PEER GROUP.
+
+Examples.
+
+This creates a switch using the configuration named "Fred".
+
+	switch Fred = birth switch ("Fred");
+
+
+
+This creates a switch using the configuration named "Fred" and the
+peer group identifier 96:47000580ffde00000000002200.
+
+
+	switch Fred = birth switch ("Fred", 96:47000580ffde00000000002200);
+
+
+*** Death of Switches
+One may destroy switches
+
+  death switch <switch_name> ;
+
+The switch death operation will only have an effect if the switch_name
+variable is non-null.  NOTE: Please be sure to remove the switch from
+any groups in which it is a member.
+
+
+*** Birth of Links
+*** Death of Links
+
+One may create or destroy links.
+
+  link <link_name> = birth link ( <sw1_name>, <sw2_name> [, <fwd key> [, <bwd key>]] );
+  link <link_name> = birth link ( <sw1_name>, <port1>, <sw2_name>, <port2> [, <fwd key> [, <bwd key> ]]);
+  death link <link_name> ;
+
+Link birth will succeed only if both the variables sw1_name and
+sw2_name are non-null.  Ports will be assigned dynamically on the two
+switches if they are available.  If no ports are available on either
+sw1_name or sw2_name; or if either sw1_name or sw2_name have a null
+value, then the link birth operation will fail, and the local link
+variable will be given a null value.
+
+The two different flavours of birth link allow you to specify exact
+ports of switches 1 and 2 you wish to connect, or the forward and
+backward bandwidth, or the bandwidth and optionally the aggregation
+token. 
+
+The <fwd key> and <bwd key> specify the key of the RAIGs for forward
+and backward bandwidth, respectively.  They are strings surrounded by
+double quotes. (e.g. "forward_key", "backward_bandwidth_key") The
+actual values are defined in a configuration file.  The link will
+always use the aggregation token associated with <fwd key>.  If no
+<fwd key> is given, then Fate chooses OC3.  If no <bwd key> is given,
+then Fate uses <fwd key> for both directions.
+
+The keys OC3, OC12, and OC48 are always defined, either explicitly in
+a configuration file or automatically by the Fate run-time
+environment.  Fate will not redefine OC3 if the configuration file has
+a definition for it.  Fate takes similar actions for OC12 and OC48.
+
+The link death operation will only have an effect if the link_name
+variable is non-null.  NOTE: Please be sure to remove the link from
+any groups in which it is a member.
+
+
+*** Injection of Visitors
+
+One may inject visitors into switches.
+
+  inject <switch_name> visitor_construction_sequence ;
+
+Here visitor_construction_sequence is the precise C++ code used to
+evoke the constructor of the desired Visitor.  For example,
+
+  inject my_switch Visitor();
+
+will inject my_switch with a generic Visitor object.
+
+If you wish to inject specialized visitors, you must inform the fc
+compiler of their definitions using the #include declaration at the
+top of your program (See section III).
+
+When injecting visitors that require NodeID's as parameters, use the
+switch variable name in it's place to get the proper NodeID.  Also, if
+you need a unique string (for SaveVisitors and such) you may use the
+switch variable name surrounded by dollar signs,
+e.g. '$switch1$.output'.  If you do no require this kind of variable
+substitution, then you must use double quotes around your strings
+instead of single quotes.  E.g. "switch1.output".
+
+*** Execution of External Programs
+
+One may execute external programs as follows:
+
+  exec <binary> <args> ;
+
+Variable strings may be used as arguments to exec, by placing dollar
+signs ($) around the variable name of a switch or link.
+
+For example:
+
+  forall(switch sw1 in switches) {
+    // We need to construct the filename here, otherwise they will
+    //    write over one another.
+    inject sw1 with SaveVisitor('/tmp/$sw1$.conv');
+  }
+
+
+*** Probabilistic Conditionals
+
+One may introduce probabilistic conditionals, as follows:
+
+	if (<probability>) {
+	
+	// block of code
+
+	}
+
+Here <probability> is a floating point number between 0.0 and 1.0; a
+probability of 1 means certainty of execution of the code block; a
+probability of 0 means certainty of non-execution of the code block.
+
+In general, the form of a probabilistic conditional is
+
+	if (probability) {
+	}
+	else if (probability) {
+	}
+	...
+	else if (probability) {
+	}
+	else {
+	}
+
+Probabilistic conditionals can also be nested.
+
+
+*** Loops Over Groups
+
+One can loop over all elements in a group as follows:
+
+	forall(switch <sw_name> in <group_name){
+
+	  // block of code
+
+	}
+
+or
+
+	forall(link <lk_name> in <group_name){
+
+	  // block of code
+
+	}
+
+The above two statements cause sw_name and lk_name to be declared as
+local variables.  The block of code is then executed once for each
+member in group_name.  Each successive iteration assigns a new value
+to sw_name by cycling through the members of group_name one at a time.
+
+NOTE: The side-effect of adding or removing members from group_name
+while inside the body of the loop is not documented.  (i.e. DON'T DO
+IT) In general such types of operations require the construction of an
+auxiliary group.
+
+*** Output Settings
+
+The output for each module may be set one of several levels.
+
+	The modules are FW, FSM, CODEC, and SIM.
+	The verbosity levels are DIAG_FATAL, DIAG_ERROR, DIAG_WARNING,
+	DIAG_INFO, and DIAG_DEBUG.
+
+For example:
+
+	diag FW DIAG_DEBUG;
+
+*** Setting the base NodeID address
+
+The base address, which is used when generating a switch's NodeID can
+be set to any resonable value, the format for this command is:
+
+	base addr "<NodeID>";
+
+For example:
+
+	base addr "96:160:47000580ffde00000100000101ff1c0692000100";
+
+NOTE:  The first two numbers are in decimal and the remaining 40
+digits (20 bytes) are in hex.
+
+
+*** Instantiation of I/O Streams
+
+Some Visitors may require I/O streams as arguments, so Fate allows you
+to instantiate fstreams attached to a file.  Use single quotes to
+denote strings.  Variable substitution is not yet implemented.
+
+For example:
+
+	ifstream infile("$sw1$.input");
+	ofstream outfile("output");
+
+*** Recording the Global State of the Simulation
+
+The global state of the simulation may be preserved in a file via the
+snapshot command.  snapshot "<filename>" ;
+
+For example:
+
+	snapshot "/tmp/global.view";
+
+
+X. Verbatim text
+
+Sometimes it is useful to put text (e.g. C++ code) into a FATE script
+verbatim.  Use "%{" and "%}" to surround such text.  It can appear
+anywhere a procedure definition can appear as well as inside a
+procedure definition.  FATE scripts can call C++ functions directly in
+the body of the script (see section X) if the function name begins
+with "internal_".  
+
+In the example below,
+
+	timeseq every1sec = periodic(0, 100, 1);
+	timeseq every2sec = periodic(0, 100, 2);
+
+	proc Every2Secs {
+	%{
+	  cout << "I am doing my thing." << endl;
+	%}
+	}
+
+	%{
+	void internal_FOO(void)
+	{
+	  // Do something
+	}
+	%}
+
+	begin
+	every1sec call FOO;
+	every2sec call Every2Secs;
+	end 100.0
+
+
+the body of the script calls internal_FOO() once per second for 100
+seconds and it calls the FATE procedure with embedded C++ code
+Every2Secs once every other second for 100 seconds.
+
+Note that there is no way to pass parameters directly to C++
+functions.  However, any C++ function or block of code can access the
+command line arguments through the global variables internal_argc and
+internal_argv, whose definitions are identical to those of their argc
+and argv counterparts.
+
+---------------------------------------------------------------------
+XI.  Body
+
+The main body of the program has the form
+
+  begin
+  <timeseq_name> call <procedure_name> ; 
+  <timeseq_name> call <procedure_name> ;
+  ...
+  <timeseq_name> call <procedure_name> ;
+  end <double>
+
+Each line of the program 
+
+  <timeseq_name> call <procedure_name> ; 
+
+can be interpreted as follows.  timeseq_name represents a discrete set
+of points in time; procedure_name is the name of some procedure.  The
+above line mandates that procedure_name be called at the times defined
+by timeseq_name.
+
+The end of the body must contain the time at which the simulation is to
+stop. 
+
+A few caveats worth noting.  Consider the following three programs
+
+//---------------- example 1
+	program synchro;
+		
+	timeseq initialtime = explicit(0.0);
+	timeseq roughly1persec = uniform(1.0,10.0, 1.0,0.5);
+	group net = { switch };
+	selector pick = [ (net) ];
+	
+	proc init {
+	  diag FW    DIAG_FATAL;
+	  diag FSM   DIAG_WARNING;
+	  diag CODEC DIAG_ERROR;
+          diag SIM   DIAG_DEBUG;
+	}
+
+	proc makeone {
+	  switch newsw = birth switch (newsw_key);
+	  group net += newsw;
+	}
+	
+	proc killone {
+	  switch victim = choose pick;
+	  net -= victim;
+	  death switch victim;
+	}
+	
+	begin
+	initialtime call init;
+	roughly1persec call makeone;
+	roughly1persec call killone;
+	end 1000.0
+	
+//---------------- example 2
+	program indep;
+	
+	timeseq A_roughly1persec = uniform(1.0,10.0, 1.0,0.5);
+	timeseq B_roughly1persec = uniform(1.0,10.0, 1.0,0.5);
+	
+	group net = { switch };
+	selector pick = [ (net) ];
+	
+	proc makeone {
+	  switch newsw = birth switch (newsw_key);
+	  group net += newsw;
+	}
+	
+	proc killone {
+	  switch victim = choose pick;
+	  net -= victim;
+	  death switch victim;
+	}
+	
+	begin
+	A_roughly1persec call makeone;
+	B_roughly1persec call killone;
+	end 1000.0
+	
+	
+//---------------- example 3
+	program synchro_diverge;
+	
+	timeseq roughly1persec = uniform(1.0,10.0, 1.0,0.5);
+	
+	group net = { switch };
+	selector pick = [ (net) ];
+	
+	proc makeone {
+	  if (0.5){
+	    switch newsw = birth switch (newsw_key);
+	    group net += newsw;
+	  }
+	}
+	
+	proc killone {
+	  if (0.5){
+	    switch victim = choose pick;
+	    net -= victim;
+	    death switch victim;
+	  }
+	}
+	
+	begin
+	roughly1persec call makeone;
+	roughly1persec call killone;
+	end 1000.0
+
+//----------------- example 4
+	program convergence;
+
+	#include <fsm/visitors/FileIOVisitors.h>
+
+	timeseq t1 = explicit(0.0);     // Time at which 3 switches 
+					// are created 
+	timeseq t2 = explicit(1.0);     // Time at which 3 links are created
+        // Every hundreth of a second from time 1.0 to time 5.0
+	timeseq t3 = periodic(1.0, 5.0, 0.01);  // Times at which convergence 
+						// is tested.
+
+	group switches = { switch };
+	group links    = {  link  };
+
+	selector elector = [ (switches) ];
+
+	proc makeSwitches {
+	  diag FW DIAG_ERROR;
+	  diag FSM DIAG_ERROR;
+	  diag CODEC DIAG_ERROR;
+	  diag SIM DIAG_ERROR;
+
+	  switch one = birth switch (one_key);
+	  group  switches += one;
+	
+	  switch two = birth switch (one_key);
+	  group  switches += two;
+
+	  switch thr = birth switch (one_key);
+	  group  switches += thr;
+	}
+	proc makeLinks {
+	  switch one = choose elector;
+	  group switches -= one;
+	  switch two = choose elector;
+	  group switches -= two;
+	  switch thr = choose elector;
+	  group switches -= thr;
+  
+	  link lone = birth link(one, two);  // one <-> two OC3
+	  link ltwo = birth link(two, thr);  // two <-> thr OC3
+	  link lthr = birth link(thr, one);  // thr <-> one OC3
+
+	  // Add the newly alloc'd links to the group
+	  group links += lone;
+	  group links += ltwo;
+	  group links += lthr;
+	  // Put all the switches back in the group
+	  group switches += one;
+	  group switches += two;
+	  group switches += thr;
+	}
+	proc testConvergence {
+	  forall(switch sw1 in switches) {
+	    // We need to construct the name here
+	    inject sw1 with SaveVisitor('$sw1$.conv');
+	  }
+	  snapshot '/tmp/global.view';
+	  // Investigator/convergence takes care of cleaning up after itself
+	  exec Investigator/convergence .conv /tmp/global.view;
+	}
+	begin
+	t1 call makeSwitches;
+	t2 call makeLinks;
+	t3 call testConvergence;
+	end 10.0
+
+
+Observations regarding the above examples:
+
+---Example 1: 
+Every t seconds, where t is chosen uniformly between 1.0+0.5 and 1.0-0.5 :
+	the procedure makeone is called 
+	the procedure killone is called
+
+Note this program is trivial; it is pretty useless!
+
+
+---Example 2: 
+Every t1 seconds, where t1 is chosen uniformly between 1.0+0.5 and 1.0-0.5 :
+	the procedure makeone is called 
+
+Every t2 seconds, where t2 is chosen uniformly between 1.0+0.5 and 1.0-0.5 :
+	the procedure makeone is called 
+
+The behavior of this program over time is non-trivial, though "in
+expectation" perhaps it is uninteresting...  Note that t1 and t2 are
+independent (identically distributed random variables).
+
+---Example 3: 
+Every t seconds, where t is chosen uniformly between 1.0+0.5 and 1.0-0.5 :
+
+	the procedure makeone is called and it does something if its
+	"coin toss comes up heads"
+
+	the procedure killone is called and it does something if its
+	"coin toss comes up heads"
+
+
+The behavior of this program over time is non-trivial, though "in
+expectation" perhaps it is uninteresting...  Note that both procedure
+makeone and procedure killone are called at the same simulation time,
+but they toss different coins, therefore, unlike example 1, their
+actions do not simply cancel each other out.
+
+--Example 4:
+
+All of the switches are allocated at time 0, the links are created and
+attached at time 1, then every hundreth of a second the simulation is
+tested to see if all of the switches agree on the network topology (a
+triangle, or cycle).
+
+---------------------------------------------------------------------
+XII.  Example Programs
+
+//---- tree merge program
+// This program makes 2 random trees in the first 10 seconds,
+// makes interconnections between the trees in seconds 10-20.
+// and then makes random connections in seconds 20-30.
+
+program tree_merge;
+
+timeseq A_roughly1persec_1_10 = uniform(1.0,10.0,  1.0,0.5);
+timeseq B_roughly1persec_1_10 = uniform(1.0,10.0,  1.0,0.5);
+timeseq roughly1persec_10_20 = uniform(10.0,20.0, 1.0,0.5);
+timeseq roughly1persec_20_30 = uniform(20.0,30.0, 1.0,0.5);
+
+group tree1 = { switch };
+group tree2 = { switch };
+
+selector pick1 = [ (tree1) ];
+selector pick2 = [ (tree2) ];
+selector pickany = [ (tree1) || (tree2) ];
+
+proc make1 {
+  switch newsw = birth switch (newsw_key);
+  switch attach = choose pick1;
+  link fiber = birth link (newsw, attach); // OC3
+  group tree1 += newsw;
+}
+
+proc make2 {
+  switch newsw = birth switch (newsw_key);;
+  switch attach = choose pick2;
+  link fiber = birth link (newsw, attach); // OC3
+  group tree2 += newsw;
+}
+
+proc cross_connect {
+  switch attach1 = choose pick1;
+  switch attach2 = choose pick2;
+  link fiber = birth link (attach1, attach2); // OC3
+}
+
+proc denser {
+  switch attach1 = choose pickany;
+  switch attach2 = choose pickany;
+  link fiber = birth link (attach1, attach2); // OC3
+}
+
+begin
+A_roughly1persec_1_10 call make1;
+B_roughly1persec_1_10 call make2;
+roughly1persec_10_20 call cross_connect;
+roughly1persec_20_30 call denser;
+end 1000.0

@@ -1,0 +1,69 @@
+#!/bin/sh 
+
+# used with 1 or more arguments
+# loops over all files selecting directories with Makefile
+# if the first argument is found in a .exempt file in directory
+#    we don't do the make in that directory
+
+if [ "x$MAKE" = "x" ]; then  MAKE=gmake; fi
+# we are commited to using gnu make (may be called gmake or make)
+
+EXEMPTFROM=$1
+TARGET=
+FULL=`pwd`; HERE=`basename $FULL`
+
+# any/all arguments beyond the first are targets for $MAKE
+shift
+while [ $# -ne 0 ]; do
+    TARGET="$TARGET $1"
+    shift
+done
+
+# gmake concatenates all arguments "-j 5 -k" will become MFLAGS="-kj 1"
+# but -k might not be first. It will probably be the only "k"
+
+if [ `echo "$MFLAGS" | grep -c "k"` -gt 0 ]; then
+   continue_on_error=1;
+else
+continue_on_error=0
+fi
+#
+# all directories that contain $EXEMPTFROM=$1 in a .exempt file
+#                 will be excluded. All others except a back link
+#                 will be included. This means foo/foo is always excluded
+#
+subdirs=
+for F in *; do
+  do_make=1
+  if [ -d $F  -a  -f $F/Makefile ]; then
+    if [ "$F" != "$HERE" ]; then
+       if [ -f $F/.exempt ]; then
+          exempt=`grep $EXEMPTFROM $F/.exempt | wc -l`
+	  if  [ $exempt -gt 0 ]; then  do_make=0;  fi
+       fi
+       if [ $do_make -eq 1 ]; then
+          subdirs="$subdirs $F"
+       fi   
+    fi
+  fi
+done
+#
+# in src directory, common must appear first
+#
+if [ `echo $subdirs | grep common | wc -l` -eq 1 ]; then
+  subdirs="common `echo $subdirs | sed 's/common//'`"
+fi
+
+
+for F in $subdirs; do
+    echo "Entering $F..."
+    cd $F
+        $MAKE --no-print-directory $MFLAGS BIND= OPT="$OPT" $TARGET
+	status=$?
+	if [ $status -ne 0  -a  $continue_on_error -eq 0 ]; then
+	      exit $status
+	fi
+    cd ..
+done
+
+#MFLAGS="$MFLAGS  --no-print-directory"

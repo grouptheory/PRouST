@@ -1,0 +1,16 @@
+
+
+You can view example1.fig with xfig (xfig example1.fig)
+
+Example programs:
+* <> denotes required parameter, [] denotes optional parameter
+
+example1_SunOS <number of Visitors> [filename]
+example2_SunOS <number of Visitors> [filename]
+example3_SunOS <-1:0:1:666> <time> [filename]
+
+You can view the examples by using the run.sh script to run your programs.
+
+run.sh example1_SunOS <number of Visitors> [layout for visualization]
+
+

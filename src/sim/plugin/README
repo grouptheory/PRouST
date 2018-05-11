@@ -1,0 +1,74 @@
+Version: $Id: README,v 1.1 1998/04/29 18:39:46 talmage Exp $
+
+This is a summary of the flow of control of plugin registration and
+construction.
+
+A. Registration -- RegisterPlugins("NRL")
+
+1. searches libNRL.so for NRLLogosConstruct(Logos *logos),
+NRLACACPolicyConstruct(void), and NRLAggregationPolicyConstruct(void)
+
+2. Calls RegisterLogos("NRL", NRLLogosConstruct)
+	which adds the mapping "NRL" -> NRLLogosConstruct to the
+	dictionary theLogosRegistry()->_name_to_ptr.
+
+3. RegisterACACPolicy("NRL", NRLACACPolicyConstruct)
+	which adds the mapping "NRL" -> NRLACACPolicyConstruct to the
+	dictionary theACACPolicyRegistry()->_name_to_ptr.
+
+4. RegisterAggregationPolicy("NRL", NRLAggregationPolicyConstruct)
+	which adds the mapping "NRL" -> NRLAggregationPolicyConstruct to the
+	dictionary theAggregationPolicyRegistry()->_name_to_ptr.
+
+
+
+B. Construction -- Logos(..., "NRL"), ACAC(..., "NRL"), Aggregator(..., "NRL")
+
+1. Logos(..., "NRL")
+	a. Calls AllocateLogos("NRL", this); // actual param logos = this
+		which looks for "NRL" in 
+			theLogosRegistry()->_name_to_ptr.key("NRL")
+
+		If it's there, 
+			returns theLogosRegistry()->_name_to_ptr.inf(logos)
+			// In this case, it calls NRLLogosConstruct(logos)
+
+		otherwise,
+			returns BaseLogosConstruct(logos)
+				which returns new BaseLogos(logos)
+
+	b. Uses the result to make routing decisions
+
+
+2. ACAC(..., "NRL")
+	a. Calls AllocateACACPolicy("NRL")
+		which looks for "NRL" in 
+			theACACPolicyRegistry()->_name_to_ptr.key("NRL")
+
+		If it's there, 
+			returns theACACPolicyRegistry()->_name_to_ptr.inf()
+			// In this case, it calls NRLACACPolicyConstruct()
+
+		otherwise,
+			returns BaseACACPolicyConstruct()
+				which returns new BaseACACPolicy()
+
+	b. Uses the result to make routing decisions
+
+
+3. Aggregator(..., "NRL")
+	a. Calls AllocateAggregationPolicy("NRL")
+		which looks for "NRL" in 
+			theAggregationPolicyRegistry()->_name_to_ptr.key("NRL")
+
+		If it's there, 
+			returns theAggregationPolicyRegistry()->
+					_name_to_ptr.inf()
+			// In this case, it calls 
+			//	NRLAggregationPolicyConstruct()
+
+		otherwise,
+			returns BaseAggregationPolicyConstruct()
+				which returns new BaseAggregationPolicy()
+
+	b. Uses the result to make routing decisions

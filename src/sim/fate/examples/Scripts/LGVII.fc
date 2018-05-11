@@ -1,0 +1,443 @@
+//
+//     A=======B=======D======C
+//     ||      ||      ||     ||
+//     ||      ||      ||     ||
+//     ||      ||      ||     ||
+//     ||      ||      ||     ||
+//     E=======F=======G======H
+//
+//     - oc12 internal: A,B,C,E,F,G,H
+//       oc3 internal: B
+//       SVC needs oc12
+//       higher structure: (AEBDFG)(CH)
+configuration "Configuration.nfo";
+
+#include <fsm/visitors/FastUNIVisitor.h>
+#include <sim/acac/ACAC_DIAG.h>
+
+// Explicit timer which triggers at simulation time 0
+timeseq t1 = explicit(0.0);
+// Explicit timer which triggers at simulation time 1
+timeseq t2 = explicit(1.0);
+// Explicit timer which triggers at simulation time 1.5
+timeseq t3 = explicit(1.5);
+// Periodic timer for call setups
+timeseq t4 = periodic(500.0, 600.0, 25.0);
+
+// Peer Groups
+group PGOne   = { switch };
+group PGTwo   = { switch };
+group PGThree = { switch };
+group PGFour  = { switch };
+group PGFive  = { switch };
+group PGSix   = { switch };
+group PGSeven = { switch };
+group PGEight = { switch };
+group PGSetup = { switch };
+
+// random selectors
+selector selOne   = [ (PGOne) ];
+selector selTwo   = [ (PGTwo) ];
+selector selThree = [ (PGThree) ];
+selector selFour  = [ (PGFour) ];
+selector selFive  = [ (PGFive) ];
+selector selSix   = [ (PGSix) ];
+selector selSeven = [ (PGSeven) ];
+selector selEight = [ (PGEight) ];
+selector selSetup = [ (PGSetup) ];
+
+proc Init {
+  // Set all diagnostics to ERROR
+  diag FW                 DIAG_ERROR;
+  diag FSM                DIAG_ERROR;
+  diag CODEC              DIAG_ERROR;
+  diag SIM                DIAG_ERROR;
+  diag FSM_FORWARDER      DIAG_WARNING;
+  diag SIM_LOGOS          DIAG_INFO;
+  diag SIM_LEADERSHIP     DIAG_INFO;
+  diag SIM_ACAC           DIAG_INFO;
+  diag SIM_ACAC_CALL_ADMISSION DIAG_DEBUG;
+  diag SIM_ACAC_CALL_RELEASE   DIAG_DEBUG;
+}
+
+// degree-2 PG  (A)
+proc makeFirstPG {
+
+  switch one = birth switch ( "PGOne", 96:47000580ffde000000000A1100 );
+  group PGOne += one;
+
+  switch two = birth switch ( "PGOne", 96:47000580ffde00000000001100 );
+  group PGOne += two;
+
+  switch thr = birth switch ( "PGOne", 96:47000580ffde00000000001100 );
+  group PGOne += thr;
+
+  switch fou = birth switch ( "PGOne", 96:47000580ffde00000000001100 );
+  group PGOne += fou;
+
+  // Setup all the links within PGOne
+  link a = birth link(one, fou, "OC12");
+  link b = birth link(two, fou, "OC12");
+  link c = birth link(thr, fou, "OC12");
+}
+
+// degree-2 PG (E)
+proc makeSecondPG {
+
+  switch one = birth switch ( "PGOne", 96:47000580ffde00000000002200 );
+  group PGTwo += one;
+
+  switch two = birth switch ( "PGOne", 96:47000580ffde00000000002200 );
+  group PGTwo += two;
+
+  switch thr = birth switch ( "PGOne", 96:47000580ffde00000000002200 );
+  group PGTwo += thr;
+
+  switch fou = birth switch ( "PGOne", 96:47000580ffde00000000002200 );
+  group PGTwo += fou;
+
+  // Setup all the links within PGTwo
+  link d = birth link(one, fou, "OC12");
+  link e = birth link(two, fou, "OC12");
+  link f = birth link(thr, fou, "OC12");
+}
+
+// degree-3 PG (B)
+proc makeThirdPG {
+
+  switch one = birth switch ( "PGOne", 96:47000580ffde00000000003300 );
+  group PGThree += one;
+
+  switch two = birth switch ( "PGOne", 96:47000580ffde00000000003300 );
+  group PGThree += two;
+
+  switch thr = birth switch ( "PGOne", 96:47000580ffde00000000003300 );
+  group PGThree += thr;
+
+  switch fou = birth switch ( "PGOne", 96:47000580ffde00000000003300 );
+  group PGThree += fou;
+
+  switch fiv = birth switch ( "PGOne", 96:47000580ffde00000000003300 );
+  group PGThree += fiv;
+
+  // Setup all the links within PGThree
+  link g = birth link(one, fiv);
+  link h = birth link(two, fiv);
+  link i = birth link(thr, fiv);
+  link j = birth link(fou, fiv);
+}
+
+// degree-3 PG (F)
+proc makeFourthPG {
+
+  switch one = birth switch ( "PGOne", 96:47000580ffde00000000004400 );
+  group PGFour += one;
+
+  switch two = birth switch ( "PGOne", 96:47000580ffde00000000004400 );
+  group PGFour += two;
+
+  switch thr = birth switch ( "PGOne", 96:47000580ffde00000000004400 );
+  group PGFour += thr;
+
+  switch fou = birth switch ( "PGOne", 96:47000580ffde00000000004400 );
+  group PGFour += fou;
+
+  switch fiv = birth switch ( "PGOne", 96:47000580ffde00000000004400 );
+  group PGFour += fiv;
+
+  // Setup all the links within PGFour
+  link k = birth link(one, fiv, "OC12");
+  link l = birth link(two, fiv, "OC12");
+  link m = birth link(thr, fiv, "OC12");
+  link n = birth link(fou, fiv, "OC12");
+}
+
+// degree-3 PG (D)
+proc makeFifthPG {
+
+  switch one = birth switch ( "PGOne", 96:47000580ffde00000000005500 );
+  group PGFive += one;
+
+  switch two = birth switch ( "PGOne", 96:47000580ffde00000000005500 );
+  group PGFive += two;
+
+  switch thr = birth switch ( "PGOne", 96:47000580ffde00000000005500 );
+  group PGFive += thr;
+
+  switch fou = birth switch ( "PGOne", 96:47000580ffde00000000005500 );
+  group PGFive += fou;
+
+  switch fiv = birth switch ( "PGOne", 96:47000580ffde00000000005500 );
+  group PGFive += fiv;
+
+  // Setup all the links within PGFive
+  link o = birth link(one, fiv, "OC12");
+  link p = birth link(two, fiv, "OC12");
+  link q = birth link(thr, fiv, "OC12");
+  link r = birth link(fou, fiv, "OC12");
+}
+
+// degree-3 PG (G)
+proc makeSixthPG {
+
+  switch one = birth switch ( "PGOne", 96:47000580ffde00000000006600 );
+  group PGSix += one;
+
+  switch two = birth switch ( "PGOne", 96:47000580ffde00000000006600 );
+  group PGSix += two;
+
+  switch thr = birth switch ( "PGOne", 96:47000580ffde00000000006600 );
+  group PGSix += thr;
+
+  switch fou = birth switch ( "PGOne", 96:47000580ffde00000000006600 );
+  group PGSix += fou;
+
+  switch fiv = birth switch ( "PGOne", 96:47000580ffde00000000006600 );
+  group PGSix += fiv;
+
+  // Setup all the links within PGSix
+  link s = birth link(one, fiv, "OC12");
+  link t = birth link(two, fiv, "OC12");
+  link u = birth link(thr, fiv, "OC12");
+  link v = birth link(fou, fiv, "OC12");
+}
+
+// degree-2 PG  (C)
+proc makeSeventhPG {
+
+  switch one = birth switch ( "PGOne", 96:47000580ffde000000000B7700 );
+  group PGSeven += one;
+
+  switch two = birth switch ( "PGOne", 96:47000580ffde000000000B7700 );
+  group PGSeven += two;
+
+  switch thr = birth switch ( "PGOne", 96:47000580ffde000000000B7700 );
+  group PGSeven += thr;
+
+  switch fou = birth switch ( "PGOne", 96:47000580ffde000000000B7700 );
+  group PGSeven += fou;
+
+  // Setup all the links within PGTwo
+  link w = birth link(one, fou, "OC12");
+  link x = birth link(two, fou, "OC12");
+  link y = birth link(thr, fou, "OC12");
+}
+
+// degree-2 PG (H)
+proc makeEigthPG {
+
+  switch one = birth switch ( "PGOne", 96:47000580ffde000000000B8800 );
+  group PGEight += one;
+
+  switch two = birth switch ( "PGOne", 96:47000580ffde000000000B8800 );
+  group PGEight += two;
+
+  switch thr = birth switch ( "PGOne", 96:47000580ffde000000000B8800 );
+  group PGEight += thr;
+
+  switch fou = birth switch ( "PGOne", 96:47000580ffde000000000B8800 );
+  group PGEight += fou;
+
+  // Setup all the links within PGTwo
+  link z  = birth link(one, fou, "OC12");
+  link aa = birth link(two, fou, "OC12");
+  link bb = birth link(thr, fou, "OC12");
+}
+
+proc makeSwitches {
+
+  call makeFirstPG;
+  call makeSecondPG;
+  call makeThirdPG;
+  call makeFourthPG;
+  call makeFifthPG;
+  call makeSixthPG;
+  call makeSeventhPG;
+  call makeEigthPG;
+}
+
+proc makeLinks {
+
+  // Extract all of PGOne's members
+  switch pg1s1 = choose selOne;
+  group  PGOne -= pg1s1;
+  switch pg1s2 = choose selOne;
+  group  PGOne -= pg1s2;
+  switch pg1s3 = choose selOne;
+  group  PGOne -= pg1s3;
+  switch pg1s4 = choose selOne;
+  group  PGOne -= pg1s4;
+
+  // ----------------------------------
+
+  // Extract all of PGTwo's members
+  switch pg2s1 = choose selTwo;
+  group  PGTwo -= pg2s1;
+  switch pg2s2 = choose selTwo;
+  group  PGTwo -= pg2s2;
+  switch pg2s3 = choose selTwo;
+  group  PGTwo -= pg2s3;
+  switch pg2s4 = choose selTwo;
+  group  PGTwo -= pg2s4;
+
+  // ----------------------------------
+
+  // Extract all of PGThree's members
+  switch pg3s1 = choose selThree;
+  group  PGThree -= pg3s1;
+  switch pg3s2 = choose selThree;
+  group  PGThree -= pg3s2;
+  switch pg3s3 = choose selThree;
+  group  PGThree -= pg3s3;
+  switch pg3s4 = choose selThree;
+  group  PGThree -= pg3s4;
+  switch pg3s5 = choose selThree;
+  group  PGThree -= pg3s5;
+
+  // ----------------------------------
+
+  // Extract all of PGFour's members
+  switch pg4s1 = choose selFour;
+  group  PGFour -= pg4s1;
+  switch pg4s2 = choose selFour;
+  group  PGFour -= pg4s2;
+  switch pg4s3 = choose selFour;
+  group  PGFour -= pg4s3;
+  switch pg4s4 = choose selFour;
+  group  PGFour -= pg4s4;
+  switch pg4s5 = choose selFour;
+  group  PGFour -= pg4s5;
+
+  // ----------------------------------
+
+  // Extract all of PGFive's members
+  switch pg5s1 = choose selFive;
+  group  PGFive -= pg5s1;
+  switch pg5s2 = choose selFive;
+  group  PGFive -= pg5s2;
+  switch pg5s3 = choose selFive;
+  group  PGFive -= pg5s3;
+  switch pg5s4 = choose selFive;
+  group  PGFive -= pg5s4;
+  switch pg5s5 = choose selFive;
+  group  PGFive -= pg5s5;
+
+  // ----------------------------------
+
+  // Extract all of PGSix's members
+  switch pg6s1 = choose selSix;
+  group  PGSix -= pg6s1;
+  switch pg6s2 = choose selSix;
+  group  PGSix -= pg6s2;
+  switch pg6s3 = choose selSix;
+  group  PGSix -= pg6s3;
+  switch pg6s4 = choose selSix;
+  group  PGSix -= pg6s4;
+  switch pg6s5 = choose selSix;
+  group  PGSix -= pg6s5;
+
+  // ----------------------------------
+
+  // Extract all of PGSeven's members
+  switch pg7s1 = choose selSeven;
+  group  PGSeven -= pg7s1;
+  switch pg7s2 = choose selSeven;
+  group  PGSeven -= pg7s2;
+  switch pg7s3 = choose selSeven;
+  group  PGSeven -= pg7s3;
+  switch pg7s4 = choose selSeven;
+  group  PGSeven -= pg7s4;
+
+  // ----------------------------------
+
+  // Extract all of PGEight's members
+  switch pg8s1 = choose selEight;
+  group  PGEight -= pg8s1;
+  switch pg8s2 = choose selEight;
+  group  PGEight -= pg8s2;
+  switch pg8s3 = choose selEight;
+  group  PGEight -= pg8s3;
+  switch pg8s4 = choose selEight;
+  group  PGEight -= pg8s4;
+
+  // ---------------------------------
+  // Inter-PeerGroup links
+  link cc = birth link(pg1s1, pg2s1, "OC12");
+  link dd = birth link(pg1s3, pg3s1, "OC12");
+  link ee = birth link(pg2s3, pg4s1, "OC12");
+  link ff = birth link(pg3s3, pg5s1, "OC12");
+  link gg = birth link(pg3s4, pg4s4, "OC12");
+  link hh = birth link(pg4s3, pg6s1, "OC12");
+  link ii = birth link(pg5s3, pg7s1, "OC12");
+  link jj = birth link(pg5s4, pg6s4, "OC12");
+  link kk = birth link(pg6s3, pg8s1, "OC12");
+  link ll = birth link(pg7s3, pg8s3, "OC12");
+
+  // now place them all back into their groups
+  group  PGOne += pg1s1;
+  group  PGOne += pg1s2;
+  group  PGOne += pg1s3;
+  group  PGOne += pg1s4;
+
+  group  PGTwo += pg2s1;
+  group  PGTwo += pg2s2;
+  group  PGTwo += pg2s3;
+  group  PGTwo += pg2s4;
+
+  group  PGThree += pg3s1;
+  group  PGThree += pg3s2;
+  group  PGThree += pg3s3;
+  group  PGThree += pg3s4;
+  group  PGThree += pg3s5;
+
+  group  PGFour += pg4s1;
+  group  PGFour += pg4s2;
+  group  PGFour += pg4s3;
+  group  PGFour += pg4s4;
+  group  PGFour += pg4s5;
+
+  group  PGFive += pg5s1;
+  group  PGFive += pg5s2;
+  group  PGFive += pg5s3;
+  group  PGFive += pg5s4;
+  group  PGFive += pg5s5;
+
+  group  PGSix  += pg6s1;
+  group  PGSix  += pg6s2;
+  group  PGSix  += pg6s3;
+  group  PGSix  += pg6s4;
+  group  PGSix  += pg6s5;
+
+  group  PGSeven += pg7s1;
+  group  PGSeven += pg7s2;
+  group  PGSeven += pg7s3;
+  group  PGSeven += pg7s4;
+
+  group  PGEight += pg8s1;
+  group  PGEight += pg8s2;
+  group  PGEight += pg8s3;
+  group  PGEight += pg8s4;
+
+  // special case for routing
+  group PGSetup += pg1s2;  // Source
+  group PGSetup += pg7s2;  // Destination
+}
+
+proc makeConnectionFromOnetoFour {
+
+  switch source = choose selSetup;
+  group PGSetup -= source;
+  switch destination = choose selSetup;
+  group PGSetup += source;
+
+  // setup a call from source to destination with the requested bandwidth.
+  // the call will last for 50 seconds then be released.
+  setup( source, destination, 1283607, "explicit", 50.0 );
+}
+
+begin
+t1 call Init;                        // Time 0.0
+t2 call makeSwitches;                // Time 1.0
+t3 call makeLinks;                   // Time 1.5
+t4 call makeConnectionFromOnetoFour; // Periodic starting at time 100.0
+end 1000.0                           // End at Time 1,000

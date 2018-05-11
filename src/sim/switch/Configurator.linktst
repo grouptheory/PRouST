@@ -1,0 +1,43 @@
+//
+// This file describes the switches at NRL and the links between them.
+//
+Switch		"Switch1"
+Ports		10
+BaseNodeID	72:160:47000580ffde00000000000102ff1c0044000100
+Levels
+	160	0
+	72	0
+OMNI	true
+ACAC	"NRL"
+Logos	"NRL"
+Aggregator "NRL"
+End
+
+
+Switch		"Switch2"
+Ports		10
+BaseNodeID	72:160:47000580ffde00000000000103ff1c009a000100
+Levels
+	160	0
+	72	0
+OMNI	true
+ACAC	"NRL"
+Logos	"NRL"
+Aggregator "NRL"
+End
+
+
+//s NodeID: 72:160:47000580ffde00000000000102ff1c0044000100:0 port=268435490
+//e NodeID: 72:160:47000580ffde00000000000103ff1c009a000100:0 port=268435489
+Link		"Switch1-Switch2"
+AggregationToken	0
+{cbr rtvbr nrtvbr abr ubr} acr 1412780 cdv 182 clr_0 8 clr_01 8 ctd 202 mcr 1412830 weight 5400
+End
+
+//s NodeID: 72:160:47000580ffde00000000000103ff1c009a000100:0 port=268435489
+//e NodeID: 72:160:47000580ffde00000000000102ff1c0044000100:0 port=268435490
+Link		"Switch2-Switch1"
+AggregationToken	0
+{cbr rtvbr nrtvbr abr ubr} acr 1412780 cdv 182 clr_0 8 clr_01 8 ctd 202 mcr 1412830 weight 5400
+End
+

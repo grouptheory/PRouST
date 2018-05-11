@@ -1,0 +1,66 @@
+// Single PG with 3 nodes
+configuration "Configuration.nfo";
+
+#include <fsm/netstats/NetStatsCollector.h>
+#include <sim/investigators/GSynchronyInvestigator.h>
+
+library "../../libInvestigators_SunOS5.so";
+
+// Explicit timer which triggers at simulation time 0
+timeseq t0 = explicit(0.0);
+timeseq t1 = explicit(0.0);
+timeseq t2 = explicit(40.0);
+
+// Peer Groups
+group PGOne   = { switch };
+
+// random selectors
+selector selOne   = [ (PGOne) ];
+
+proc Init {
+  // Set all diagnostics to ERROR
+  diag FW                 DIAG_ERROR;
+  diag FSM                DIAG_ERROR;
+  diag CODEC              DIAG_ERROR;
+  diag SIM                DIAG_ERROR;
+  diag OMNI               DIAG_ERROR;
+
+  %{
+    // char buf[128];
+    // sprintf(buf, "%s.gsync", stripSlash( internal_argv[0] ));
+    // GSynchronyInvestigator * gsi = new GSynchronyInvestigator( buf, 5, false );
+  %}
+}
+
+// degree-1 PG
+proc makePGOne {
+
+  switch one = birth switch ( "PGOne", 96:47000580ffde00000000001100);
+
+  switch two = birth switch ( "PGOne", 96:47000580ffde00000000001100);
+
+  switch thr = birth switch ( "PGOne", 96:47000580ffde00000000001100);
+
+  link a = birth link(one, two, "OC12");
+  link b = birth link(thr, two, "OC12");
+
+  group PGOne += one;
+  group PGOne += thr;
+  group PGOne += two;
+}
+
+proc makeCall {
+  
+  switch src = choose selOne;
+  group PGOne -= src;
+  switch dst = choose selOne;
+  group PGOne += src;
+
+  setup( src, dst, 1024, "explicit", 5.0 );
+}
+
+begin
+t0 call Init;                        // Time 0.0
+t1 call makePGOne;                   // Time 0.0
+t2 call makeCall;                    // Time 40.0
+end 100.0                            // End at Time 100

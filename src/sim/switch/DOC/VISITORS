@@ -1,0 +1,57 @@
+Visitor class hierarchy
+
+PortVisitor
+    PortVisitor is the root of a hierarchy of Visitors that affect
+    the behavior of a port.  A PortVisitor is for a specific Port; it
+    carries the number of that Port.  A PortVisitor can be injected into
+    the top of a Switch.  It will find its way to the right Port.
+
+	PortDataVisitor
+	    PortDataVisitor carries arbitrary data into and out of
+	    a Port.  PortDataVisitors can leave a Switch.
+
+	PortProtocolVisitor
+	    PortProtocolVisitor carries protocol or control
+	    information into a Port.  PortProtocolVisitors do not leave
+	    the Switch.
+
+		VPVCInstallerVisitor
+		    VPVCInstallerVisitor instructs a Port to
+		    construct a new Protocol path for a specific VPVC.
+		    It carries the State object for the Protocol.
+
+		VPVCUninstallerVisitor
+		    VPVCUninstallerVisitor instructs a Port to
+		    remove a Protocol path for a specific VPVC.
+
+
+PortInstallerVisitor
+    PortInstallerVisitor instructs a Switch to create a Port.  It
+    carries the number of the new Port.  PortInstallerVisitors do not
+    leave the Switch.
+
+PortUninstallerVisitor
+    PortUninstallerVisitor instructs a Switch to remove a Port.  It
+    carries the number of the new Port.
+
+StrikeBreakerVisitor
+    StrikeBreakerVisitor instructs a Factory to resume making new
+    Conduits.  Not all Factories understand the StrikeBreakerVisitor; they
+    always create new Conduits.  When a StrikeBreakerVisitor encounters
+    such a "non-union" Factory, it passes itself along to the next
+    Conduit.  The StrikeBreakerVisitor commits Suicide() when it
+    encounters a "union" Factory.  
+
+BUG: A StrikeBreakerVisitor can leave the Switch if there are no
+"union" Factories in the Switch.  This should not be!
+
+StrikeVisitor
+    StrikeBreakerVisitor instructs a Factory to stop making new
+    Conduits.  Not all Factories understand the StrikeBreakerVisitor; they
+    always create new Conduits.  When a StrikeBreakerVisitor encounters
+    such a "non-union" Factory, it passes itself along to the next
+    Conduit.  The StrikeBreakerVisitor commits Suicide() when it
+    encounters a "union" Factory.
+
+BUG: A StrikeVisitor can leave the Switch if there are no
+"union" Factories in the Switch.  This should not be!

@@ -1,0 +1,10 @@
+
+usage: parse.sh Scripts/foo.fc
+
+This will generate foo_OS in the current directory.  
+
+If you write a new script, please place it in the Scripts subdirectory.  
+This reduces clutter in the working directory, and will make it easier 
+to clean up unused binaries, without the accidental danger of deleting
+scripts.
+

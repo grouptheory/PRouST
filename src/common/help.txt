@@ -1,0 +1,18 @@
+
+make:	In order of increasing risk
+
+	            all -- make everything here and below
+	         depend -- recompute dependencies for current system
+		library -- make library here and below
+		  execs -- make all executables possible
+		  clean -- clean here and below for current system
+			   (src/common must be cleaned separately)
+		   help -- cat this
+	     debug-make -- prints some variables that make is using
+
+from src and its immediate subdirectories, the script
+
+  src/common/forall-nonexempt-subdirs
+
+is used to decend through the directories.
+

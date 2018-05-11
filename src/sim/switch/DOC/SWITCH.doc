@@ -1,0 +1,49 @@
+switch submodule
+
+The switch submodule simulates a switch of n ports.  Port 0 is the
+"control" port.  Port 0 provides routing, call admission, and other
+PNNI functions.  Ports 1 through n-1 simulate the physical ports of
+the switch, the ones that connect to hosts and other switches.
+
+From top to bottom, the switch consists of the Data Forwarder; a Port
+Mux connected to a Port Factory, data ports (ports 1 through n-1), and
+a Control Port (port 0); another Port Mux; and the Switch BotMux.
+
+The Data Forwarder routes each Visitor from its input port and vpi/vci
+to its output port and vpi/vci.  It routes incoming PNNI and UNI
+Visitors to the Control Port.
+
+The Port Muxes collect and distribute all of the input to and output
+from the simulated switch ports.  The upper Port Mux passes all
+upwared travelling Visitors to the Data Forwarder.  It passes all
+downward travelling Visitors except the PortInstallerVisitor to the
+appropriate simulated port.  It passes PortInstallerVisitors to the
+Port Factory.  The lower Port Mux passes all upward travelling
+Visitors except PortInstallerVisitors to the appropriate simulated
+port.  It passes PortInstallerVisitors to the Port Factory.  It passes
+all downward travelling Visitors to the Switch BotMux.
+
+The Port Factory creates one new, simulated switch port for each
+PortInstallerVisitor it encounters unless it is "on strike".  When the
+Port Factory is "on strike", the number of ports in the simulated
+switch is fixed.
+
+The SwitchBotMux at the "bottom" of the switch represents the physical
+connectors for each port 1 through n-1.  It turns the single stream of
+Visitors from the bottom Port Mux into n - 1 streams of Visitors, each
+corresponding to one simulated switch port.
+
+
+Functions for creating, linking, and unlinking switches
+
+MakeSwitch() creates a Conduit that represents a switch.  Each port
+other than 0 runs the PNNI Hello protocol.  Each port has an inbound
+queue and an outbound queue of the same depth and the same service
+interval.  Port 0 is the Control Port, which provides routing, call
+admission, and other PNNI services.
+
+LinkSwitches() physically links a port of one switch with a port of
+another switch.  It informs each switch that the port is up.
+
+UnlinkSwitches() destroys one physical link between two switches.  It
+informs each switch that the port is down.

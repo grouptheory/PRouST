@@ -1,0 +1,10 @@
+
+
+void set_random_seed(long rseed);
+
+double     uniform_distribution::sample(double min, double max);
+double exponential_distribution::sample(double mean);
+double      normal_distribution::sample(double mean, double variance);
+double       gamma_distribution::sample(double mean);
+double     poisson_distribution::sample(double mean);
+double    binomial_distribution::sample(double prob, int num_trials);

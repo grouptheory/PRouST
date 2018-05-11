@@ -1,0 +1,177 @@
+// $Id: Configurator.test,v 1.2 1999/02/25 00:03:16 talmage Exp $
+switch "Test1"
+ports	5
+basenodeid 96:160:47000580ffde0000000000110000000000000000
+Levels
+	160 0
+	96 0
+OMNI	true
+ACAC	"NRL"
+Logos	"NRL"
+Aggregator "NRL"
+END
+
+switch "Test2"
+ports	5
+basenodeid 96:160:47000580ffde0000000000220000000000000000
+Levels
+	160 0
+	96 0
+OMNI	true
+ACAC	"NRL"
+Logos	"NRL"
+Aggregator "NRL"
+END
+
+//acr 1412830 mcr 1412780 weight 5400 ctd 202 cdv 182 clr0 8 clr01 8, aggtok= 0, route
+
+link "link-one"
+AggregationToken 0
+{rtvbr nrtvbr} acr 1412830 cdv 182 clr_0 8 clr_01 8 ctd 202 mcr 1412830 weight 5400
+{cbr abr ubr} acr 1412830 cdv 182 clr_0 16 clr_01 16 ctd 404 mcr 1412830 weight 5400
+end
+
+call "BBC-class-A-p2p"
+BBC	class A clipping false connection p2p atc cbr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-C-clipping"
+BBC	class C clipping true connection p2p atc cbr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-X-p2mp"
+BBC	class X clipping false connection p2mp atc cbr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-cbr"
+BBC	class VP clipping false connection p2p atc cbr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-cbr_4"
+BBC	class VP clipping false connection p2p atc cbr_4
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-cbr_6"
+BBC	class VP clipping false connection p2p atc cbr_6
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-cbr_clr"
+BBC	class VP clipping false connection p2p atc cbr_clr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-rtvbr"
+BBC	class VP clipping false connection p2p atc rtvbr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-rtvbr_1"
+BBC	class VP clipping false connection p2p atc rtvbr_1
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-rtvbt_clr"
+BBC	class VP clipping false connection p2p atc rtvbr_clr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-nrtvbr"
+BBC	class VP clipping false connection p2p atc nrtvbr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-nrtvbr_0"
+BBC	class VP clipping false connection p2p atc nrtvbr_0
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-nrtvbr_2"
+BBC	class VP clipping false connection p2p atc nrtvbr_2
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-nrtvbr_8"
+BBC	class VP clipping false connection p2p atc nrtvbr_8
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-nrtvbr_clr"
+BBC	class VP clipping false connection p2p atc nrtvbr_clr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+
+call "BBC-class-VP-abr"
+BBC	class VP clipping false connection p2p atc abr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end
+

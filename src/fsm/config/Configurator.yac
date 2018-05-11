@@ -1,0 +1,631 @@
+/* -*- C++ -*-
+ * @file Configurator.yac
+ * @author talmage
+ * @version $Id: Configurator.yac,v 1.9 1999/02/25 00:09:17 talmage Exp $
+ *
+ * Purpose: Grammar and parser for files that describe switch, link,
+ * and call configurations.
+ */
+%{
+
+#include "CallConfiguration.h"
+#include "Configurator.h"
+#include "LinkConfiguration.h"
+#include "SwitchConfiguration.h"
+#include <DS/containers/list.h>
+#include <DS/containers/sortseq.h>
+#include <DS/util/String.h>
+#include <FW/basics/diag.h>
+#include <codec/pnni_ig/id.h>
+#include <codec/pnni_ig/resrc_avail_info.h>
+#include <codec/uni_ie/UNI40_bbc.h>
+#include <codec/uni_ie/UNI40_e2e_trans_delay.h>
+#include <codec/uni_ie/UNI40_td.h>
+#include <codec/uni_ie/UNI40_xqos.h>
+#include <codec/uni_ie/qos_param.h>
+#include <common/cprototypes.h>
+#include <stdio.h>
+
+// general ----------------
+
+extern int PNNIConfiguratorlex();
+extern int PNNIConfiguratorerror(char* s);
+extern int PNNIConfiguratordebug;
+// XXX How to declare YYSTYPE without declaring it twice?
+// XXX extern void yyprint(FILE *file, int type, YYSTYPE value);
+
+extern void yyprint(FILE *file, int type, void *value);
+
+#define YYPRINT(file, type, value)   yyprint (file, type, &value)
+#define YYPARSE_PARAM parm
+%}
+
+/* Generate a re-entrant parser. */
+/* %pure_parser */
+
+/* Generate an array of token names in the parser file. */
+%token_table
+
+/* Begin parsing with the 'language' nonterminal */
+%start Completeconfiguration
+
+%union {
+  /* static char *configurator_yac_rcsid="$Id"; */
+  ds_String	*string;
+  int		integer;
+  NodeID	*nodeid;
+  bool		boolean;
+  UNI40_traffic_desc	*trafficdescriptor;
+  ig_resrc_avail_info	*raig;
+  ie_bbc	*bbc;
+  ie_qos_param	*qos;
+  UNI40_xqos_param	*extqos;
+  UNI40_e2e_transit_delay	*endtoendtransitdelay;
+  sortseq<int, SwitchLevelInfo *>	*levels;
+  list<ig_resrc_avail_info *>	*raigs;
+  ie_bbc::trans_caps atctype;
+  ie_bbc::conn_type connectiontype;
+  ie_bbc::Bbc_class bbcclass;
+  struct plugin_library_type {
+    ds_String *plugin;
+    ds_String *library;
+  } plugin_library;
+}
+
+
+/* Terminals of no particular type */
+%token _switch
+%token _abr
+%token _acac
+%token _acr
+%token _aggregator
+%token _aggregationtoken
+%token _backward
+%token _basenodeid
+%token _bbc_atc
+%token _bbc_class
+%token _bbc_class_a
+%token _bbc_class_c
+%token _bbc_class_vp
+%token _bbc_class_x
+%token _callconfiguration
+%token _cbr
+%token _cbr_4
+%token _cbr_6
+%token _cbr_clr
+%token _ccdv
+%token _cdv
+%token _clipping
+%token _clr
+%token _clr_0
+%token _clr_01
+%token _connection
+%token _ctd
+%token _e2e_cumulative
+%token _e2e_maximum
+%token _e2e_net_gen_ind
+%token _e2etd
+%token _end
+%token _extqos
+%token _forward
+%token _gcac_clp
+%token _lc
+%token _link
+%token _logos
+%token _mbs_0
+%token _mbs_01
+%token _mcr
+%token _mcr_01
+%token _nrtvbr
+%token _nrtvbr_0
+%token _nrtvbr_2
+%token _nrtvbr_8
+%token _nrtvbr_clr
+%token _omni
+%token _p2mp
+%token _pcr_0
+%token _pcr_01
+%token _p2p
+%token _rc
+%token _rtvbr
+%token _rtvbr_1
+%token _rtvbr_clr
+%token _scr_0
+%token _scr_01
+%token _switch_levels
+%token _switch_ports
+%token _tpc1
+%token _tpc2
+%token _tpc3
+%token _tpc4
+%token _tpc5
+%token _tpc6
+%token _tpc7
+%token _tpc8
+%token _trafficdescriptor
+%token _ubr
+%token _uni_bbc
+%token _uni_qos
+%token _unknown
+%token _weight
+
+
+/* Terminals of some type */
+
+
+%token <boolean> _false
+%token <integer> _integer
+%token <nodeid> _nodeid
+%token <string> _string_obj
+%token <boolean> _true
+
+
+/* Nonterminals of some type */
+%type <plugin_library> AcacPlugin
+%type <plugin_library> AggregatorPlugin
+%type <atctype> Atctype
+%type <bbc> Bbc
+%type <bbcclass> Bbcclass
+%type <boolean> Boolean
+%type <connectiontype> Connectiontype
+%type <endtoendtransitdelay> Endtoendtransitdelay
+%type <extqos> Extqos
+%type <levels> Levels
+%type <levels> Levellist
+%type <plugin_library> LogosPlugin
+%type <qos> Qos
+%type <raigs> Raigs
+%type <integer> Raigflag
+%type <integer> Raigflags
+%type <integer> Raigflags0
+%type <trafficdescriptor> Trafficdescriptor
+
+
+%%
+
+Completeconfiguration: Configuration
+	| Completeconfiguration Configuration
+;
+
+Configuration: Switchconfiguration
+	| Linkconfiguration
+	| Callconfiguration
+;
+
+Switchconfiguration: _switch _string_obj _switch_ports _integer 
+	_basenodeid _nodeid
+	Levels _omni Boolean AcacPlugin LogosPlugin AggregatorPlugin
+	_end
+	{
+	  SwitchConfiguration *sc = 
+	    new SwitchConfiguration($2, $4, $6, $7, $9, 
+				    $10.plugin, $10.library,
+				    $11.plugin, $11.library,
+				    $12.plugin, $12.library);
+	  ((Configurator *)parm)->Insert($2, sc);
+	}
+;
+
+AcacPlugin: _acac _string_obj _string_obj
+	{
+	  $$.plugin = $2;
+	  $$.library = $3;
+	}
+	| _acac _string_obj
+	{
+	  $$.plugin = $2;
+	  $$.library = new ds_String("lib");
+	  *($$.library) += *($2);
+	  *($$.library) += ".so";
+	}
+
+AggregatorPlugin: _aggregator _string_obj _string_obj
+	{
+	  $$.plugin = $2;
+	  $$.library = $3;
+	}
+	| _aggregator _string_obj
+	{
+	  $$.plugin = $2;
+	  $$.library = new ds_String("lib");
+	  *($$.library) += *($2);
+	  *($$.library) += ".so";
+	}
+
+LogosPlugin: _logos _string_obj _string_obj
+	{
+	  $$.plugin = $2;
+	  $$.library = $3;
+	}
+	| _logos _string_obj
+	{
+	  $$.plugin = $2;
+	  $$.library = new ds_String("lib");
+	  *($$.library) += *($2);
+	  *($$.library) += ".so";
+	}
+
+Levels: _switch_levels Levellist
+	{
+	  $$ = $2;
+	}
+;
+
+Levellist: _integer _integer
+	{
+	  sortseq<int, SwitchLevelInfo *> * answer =
+	    new sortseq<int, SwitchLevelInfo *>;
+
+	  SwitchLevelInfo *sl = new SwitchLevelInfo($1, $2, 0);
+	  answer->insert($1, sl);
+	  $$ = answer;
+	}
+	|
+	Levellist _integer _integer
+	{
+	  SwitchLevelInfo *sl = new SwitchLevelInfo($2, $3, 0);
+	  $1->insert($2, sl);
+	  $$ = $1;
+	}
+;
+
+Boolean: _true
+	{
+	  $$ = $1;
+	}
+	| _false
+	{
+	  $$ = $1;
+	}
+;
+
+
+Linkconfiguration: _link _string_obj _aggregationtoken _integer Raigs _end
+	{
+	  LinkConfiguration *lc = new LinkConfiguration($2, $4, $5);
+	  ((Configurator *)parm)->Insert($2, lc);
+	}
+;
+
+
+Raigs:  Raigflags _acr _integer _cdv _integer _clr_0 _integer 
+	_clr_01 _integer _ctd _integer _mcr _integer _weight _integer
+	{
+	  ig_resrc_avail_info *aRAIG = 
+	    new ig_resrc_avail_info(ig_resrc_avail_info::outgoing, $1, $15, 
+				    $13, $3, $11, $5, $7, $9);
+
+	  list <ig_resrc_avail_info *> *answer = 
+	    new list <ig_resrc_avail_info *>;
+
+	  answer->insert(aRAIG);
+	  $$ = answer;
+	}
+	| Raigs  Raigflags _acr _integer _cdv _integer 
+	_clr_0 _integer _clr_01 _integer _ctd _integer _mcr _integer 
+	_weight _integer
+	{
+	  ig_resrc_avail_info *aRAIG = 
+	    new ig_resrc_avail_info(ig_resrc_avail_info::outgoing, $2, $16, 
+				    $14, $4, $12, $6, $8, $10);
+
+	  $1->insert(aRAIG);
+	  $$ = $1;
+	}
+;
+
+Raigflags: _lc Raigflags0 _rc
+	{
+	  $$ = $2;
+	}
+;
+
+Raigflags0: Raigflag
+	{
+	  $$ = $1;
+	}
+	| Raigflags0 Raigflag
+	{
+	  $$ = $1 | $2;
+	}
+;
+
+Raigflag: _cbr 
+	{ 
+	  $$ = RAIG_FLAG_CBR; 
+	}
+	| _nrtvbr 
+	{ 
+	  $$ = RAIG_FLAG_NRTVBR; 
+	}
+	| _rtvbr 
+	{
+	  $$ = RAIG_FLAG_RTVBR; 
+	}
+	| _ubr 
+	{ 
+	  $$ = RAIG_FLAG_UBR; 
+	}
+	| _abr 
+	{
+	  $$ = RAIG_FLAG_ABR; 
+	}
+	| _gcac_clp 
+	{ 
+	  $$ = RAIG_FLAG_GCAC_CLP; 
+	}
+;
+
+Callconfiguration: _callconfiguration _string_obj _uni_bbc Bbc 
+	_e2etd Endtoendtransitdelay _extqos Extqos
+	_uni_qos Qos _trafficdescriptor Trafficdescriptor _end
+	{
+	  CallConfiguration *cf = new CallConfiguration($2, $12, $4, $10, 
+							$8, $6);
+	  ((Configurator *)parm)->Insert($2, cf);
+	}
+;
+
+Bbc: _bbc_class Bbcclass _clipping Boolean _connection Connectiontype 
+	_bbc_atc Atctype
+	{
+	  ie_bbc *answer = 
+	    new ie_bbc($2, ($4 ? ie_bbc::clipped : ie_bbc::not_clipped),
+		       $6, $8);
+	  $$ = answer;
+	}
+;
+
+Endtoendtransitdelay: _e2e_cumulative _integer _e2e_maximum _integer 
+	_e2e_net_gen_ind _integer
+	{
+	  UNI40_e2e_transit_delay *answer = 
+	    new UNI40_e2e_transit_delay($2, $4, $6);
+	  $$ = answer;
+	}
+;
+
+Extqos: _forward _ccdv _integer _cdv _integer _clr _integer
+	 _backward _ccdv _integer _cdv _integer _clr _integer
+	{
+	  UNI40_xqos_param *answer = 
+	    new UNI40_xqos_param(UNI40_xqos_param::user, 
+				 UNI40_xqos_param::both,
+				 $3, $10, $5, $12, $7, $14);
+	  $$ = answer;
+	}
+;
+
+Qos: _forward _integer _backward _integer
+	{
+	  ie_qos_param::qos_indicator bclass;	// backward QoS class
+	  ie_qos_param::qos_indicator fclass;	// forward QoS class
+
+	  switch ($2) {
+	  case 0:
+	    fclass = ie_qos_param::qos0;
+	    break;
+	  case 1:
+	    fclass = ie_qos_param::qos1;
+	    break;
+	  case 2:
+	    fclass = ie_qos_param::qos2;
+	    break;
+	  case 3:
+	    fclass = ie_qos_param::qos3;
+	    break;
+	  case 4:
+	    fclass = ie_qos_param::qos4;
+	    break;
+	  default:
+	    PNNIConfiguratorerror("Forward QoS class out of range");
+	    break;
+	  };
+
+	  switch ($4) {
+	  case 0:
+	    bclass = ie_qos_param::qos0;
+	    break;
+	  case 1:
+	    bclass = ie_qos_param::qos1;
+	    break;
+	  case 2:
+	    bclass = ie_qos_param::qos2;
+	    break;
+	  case 3:
+	    bclass = ie_qos_param::qos3;
+	    break;
+	  case 4:
+	    bclass = ie_qos_param::qos4;
+	    break;
+	  default:
+	    PNNIConfiguratorerror("Backward QoS class out of range");
+	    break;
+	  };
+
+	  ie_qos_param *answer = 
+	      new ie_qos_param(fclass, bclass);
+	    $$ = answer;
+	}
+;
+
+Trafficdescriptor: _tpc1 _forward _pcr_0 _integer _pcr_01 _integer
+	_backward _pcr_0 _integer _pcr_01 _integer
+	{
+	  UNI40_traffic_desc *answer = new UNI40_traffic_desc();
+	  answer->set_TP1(UNI40_traffic_desc::fw, $4, $6);
+	  answer->set_TP1(UNI40_traffic_desc::bw, $9, $11);
+	  $$ = answer;
+	}
+	| _tpc2 _forward _pcr_0 _integer _pcr_01 _integer
+	_backward _pcr_0 _integer _pcr_01 _integer
+	{
+	  UNI40_traffic_desc *answer = new UNI40_traffic_desc();
+	  answer->set_TP2(UNI40_traffic_desc::fw, $4, $6);
+	  answer->set_TP2(UNI40_traffic_desc::bw, $9, $11);
+	  $$ = answer;
+	}
+	| _tpc3 _forward _pcr_01 _integer _scr_0 _integer _mbs_0 _integer
+	_backward _pcr_01 _integer _scr_0 _integer _mbs_0 _integer
+	{
+	  UNI40_traffic_desc *answer = new UNI40_traffic_desc();
+	  answer->set_TP3(UNI40_traffic_desc::fw, $4, $6, $8);
+	  answer->set_TP3(UNI40_traffic_desc::bw, $11, $13, $15);
+	  $$ = answer;
+	}
+	| _tpc4 _forward _pcr_01 _integer _scr_0 _integer _mbs_0 _integer
+	_backward _pcr_01 _integer _scr_0 _integer _mbs_0 _integer
+	{
+	  UNI40_traffic_desc *answer = new UNI40_traffic_desc();
+	  answer->set_TP4(UNI40_traffic_desc::fw, $4, $6, $8);
+	  answer->set_TP4(UNI40_traffic_desc::bw, $11, $13, $15);
+	  $$ = answer;
+	}
+	| _tpc5 _forward _pcr_01 _integer _backward _pcr_01 _integer
+	{
+	  UNI40_traffic_desc *answer = new UNI40_traffic_desc();
+	  answer->set_TP5(UNI40_traffic_desc::fw, $4);
+	  answer->set_TP5(UNI40_traffic_desc::bw, $7);
+	  $$ = answer;
+	}
+	| _tpc6 _forward _pcr_01 _integer _scr_01 _integer _mbs_01 _integer
+	_backward _pcr_01 _integer _scr_01 _integer _mbs_01 _integer
+	{
+	  UNI40_traffic_desc *answer = new UNI40_traffic_desc();
+	  answer->set_TP6(UNI40_traffic_desc::fw, $4, $6, $8);
+	  answer->set_TP6(UNI40_traffic_desc::bw, $11, $13, $15);
+	  $$ = answer;
+	}
+	| _tpc7 _forward _pcr_01 _integer _backward _pcr_01 _integer
+	{
+	  UNI40_traffic_desc *answer = new UNI40_traffic_desc();
+	  answer->set_BE($4, $7);
+	  $$ = answer;
+	}
+	| _tpc8 _forward _pcr_01 _integer _mcr_01 _integer
+	_backward _pcr_01 _integer _mcr_01 _integer
+	{
+	  UNI40_traffic_desc *answer = new UNI40_traffic_desc();
+	  answer->set_BE($4, $9, $6, $11);
+	  $$ = answer;
+	}
+;
+
+Atctype: _cbr
+	{
+	  $$ = ie_bbc::CBR;
+	}
+	| _cbr_4
+	{
+	  $$ = ie_bbc::CBR_4;
+	}
+	| _cbr_6
+	{
+	  $$ = ie_bbc::CBR_6;
+	}
+	| _cbr_clr
+	{
+	  $$ = ie_bbc::CBR_CLR;
+	}
+	| _rtvbr
+	{
+	  $$ = ie_bbc::RT_VBR;
+	}
+	| _rtvbr_1
+	{
+	  $$ = ie_bbc::RT_VBR_1;
+	}
+	| _rtvbr_clr
+	{
+	  $$ = ie_bbc::RT_VBR_CLR;
+	}
+	| _nrtvbr
+	{
+	  $$ = ie_bbc::NonRT_VBR;
+	}
+	| _nrtvbr_0
+	{
+	  $$ = ie_bbc::NonRT_VBR_0;
+	}
+	| _nrtvbr_2
+	{
+	  $$ = ie_bbc::NonRT_VBR_2;
+	}
+	| _nrtvbr_8
+	{
+	  $$ = ie_bbc::NonRT_VBR_8;
+	}
+	| _nrtvbr_clr
+	{
+	  $$ = ie_bbc::NonRT_VBR_CLR
+	}
+	| _abr
+	{
+	  $$ = ie_bbc::ABR;
+	}
+;
+
+Connectiontype: _p2p
+	{
+	  $$ = ie_bbc::p2p;
+	}
+	| _p2mp
+	{
+	  $$ = ie_bbc::p2mp;
+	}
+;
+
+Bbcclass: _unknown
+	{
+	  $$ = ie_bbc::unspecified_or_unknow;
+	}
+	| _bbc_class_a
+	{
+	  $$ = ie_bbc::BCOB_A;
+	}
+	| _bbc_class_c
+	{
+	  $$ = ie_bbc::BCOB_C;
+	}
+	| _bbc_class_x
+	{
+	  $$ = ie_bbc::BCOB_X;
+	}
+	| _bbc_class_vp
+	{
+	  $$ = ie_bbc::BCOB_VP;
+	}
+;
+
+
+%%
+extern int PNNIConfiguratorlineno;
+
+extern "C" int PNNIConfiguratorwrap(void) { return 1; }
+
+void yyprint(FILE *file, int type, void *void_val)
+{
+  YYSTYPE *value = (YYSTYPE *)void_val;
+
+  switch (type) {
+  case _string_obj:		// string
+    fprintf(file, "\"%s\"", value->string);
+    break;
+
+  case _integer:
+    fprintf(file, " intval= %d", value->integer);
+    break;
+
+  default:
+    break;
+  }
+}
+
+
+int PNNIConfiguratorerror(char* s)
+{
+  printf("\n         Fatal: %s\n", s);
+  printf("     at Line #: %d\n", PNNIConfiguratorlineno);
+  //  printf("Offending line: %s\n", recentline);
+  exit(1);
+}

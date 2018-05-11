@@ -1,0 +1,23 @@
+/* XPM */
+static const char * restart_icon[] = {
+/* width height num_colors chars_per_pixel */
+"    16    13        3            1",
+/* colors */
+". c #ffffff",
+"# c #000000",
+"a c #bfc2bf",
+/* pixels */
+"................",
+".aaaaaaaaaaaaaaa",
+".aaaaaaaaaaaaaaa",
+".aa##aaaaa#aaaaa",
+".aa##aaaa##aaaaa",
+".aa##aaa###aaaaa",
+".aa##aa####aaaaa",
+".aa##aa####aaaaa",
+".aa##aaa###aaaaa",
+".aa##aaaa##aaaaa",
+".aa##aaaaa#aaaaa",
+".aaaaaaaaaaaaaaa",
+".aaaaaaaaaaaaaaa"
+};

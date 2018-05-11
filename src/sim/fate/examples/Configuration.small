@@ -1,0 +1,21 @@
+
+switch		"PGOne"
+ports		4
+basenodeid	96:160:47000580ffde0000000000110000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END

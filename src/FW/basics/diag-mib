@@ -1,0 +1,41 @@
+
+#define ALL             ""
+
+#define FW		"FW"
+#define FW_CTORS	"FW.FW_ctors"
+#define FW_ACTORS	"FW.actors"
+#define FW_BASICS	"FW.basics"
+#define FW_BEHAVIORS	"FW.behaviors"
+#define FW_KERNEL	"FW.kernel"
+
+#define CODEC		"codec"
+#define CODEC_CTORS	"codec.codec_ctors"
+#define CODEC_PNNI_IG	"codec.pnni_ig"
+#define CODEC_PNNI_PKT	"codec.pnni_pkt"
+#define CODEC_Q93B_MSG	"codec.q93b_msg"
+#define CODEC_UNI_IE	"codec.uni_ie"
+
+#define FSM		"fsm"
+#define FSM_CTORS	"fsm.fsm_ctors"
+#define FSM_DATABASE	"fsm.database"
+#define FSM_ELECTION	"fsm.election"
+#define FSM_EVENTS	"fsm.events"
+#define FSM_HELLO	"fsm.hello"
+#define FSM_NODEPEER	"fsm.nodepeer"
+#define FSM_QUEUE	"fsm.queue"
+#define FSM_VISITORS	"fsm.visitors"
+#define FSM_FORWARDER	"fsm.forwarder"
+#define FSM_NETSTATS	"fsm.netstats"
+
+#define SIM		"sim"
+#define SIM_CTORS	"sim.sim_ctors"
+#define SIM_ACAC	"sim.acac"
+#define SIM_LEADERSHIP	"sim.leadership"
+#define SIM_CTRL	"sim.ctrl"
+#define SIM_LOGOS	"sim.logos"
+#define SIM_PORT	"sim.port"
+#define SIM_SWITCH	"sim.switch"
+
+#define OMNI		"omni"
+#define INVESTIGATOR	"investigator"
+

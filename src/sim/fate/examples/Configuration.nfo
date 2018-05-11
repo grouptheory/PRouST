@@ -1,0 +1,840 @@
+
+switch		"PGOne"
+ports		4
+basenodeid	96:160:47000580ffde0000000000110000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGTwo"
+ports		4
+basenodeid	96:160:47000580ffde0000000000220000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGThree"
+ports		4
+basenodeid	96:160:47000580ffde0000000000330000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGFour"
+ports		4
+basenodeid	96:160:47000580ffde0000000000440000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGFive"
+ports		4
+basenodeid	96:160:47000580ffde0000000000550000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGSix"
+ports		4
+basenodeid	96:160:47000580ffde0000000000660000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGSeven"
+ports		4
+basenodeid	96:160:47000580ffde0000000000770000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGEight"
+ports		4
+basenodeid	96:160:47000580ffde0000000000880000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGNine"
+ports		4
+basenodeid	96:160:47000580ffde0000000000990000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGTen"
+ports		4
+basenodeid	96:160:47000580ffde0000000000AA0000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGEleven"
+ports		4
+basenodeid	96:160:47000580ffde0000000000BB0000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGTwelve"
+ports		4
+basenodeid	96:160:47000580ffde0000000000CC0000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGThirteen"
+ports		4
+basenodeid	96:160:47000580ffde0000000000DD0000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGFourteen"
+ports		4
+basenodeid	96:160:47000580ffde0000000000EE0000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGFifteen"
+ports		4
+basenodeid	96:160:47000580ffde0000000000FF0000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGSixteen"
+ports		4
+basenodeid	96:160:47000580ffde0000000000000000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneOne"
+ports		4
+basenodeid	96:160:47000580ffde0000000011110000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneTwo"
+ports		4
+basenodeid	96:160:47000580ffde0000000011220000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneThree"
+ports		4
+basenodeid	96:160:47000580ffde0000000011330000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneFour"
+ports		4
+basenodeid	96:160:47000580ffde0000000011440000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneFive"
+ports		4
+basenodeid	96:160:47000580ffde0000000011550000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneSix"
+ports		4
+basenodeid	96:160:47000580ffde0000000011660000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneSeven"
+ports		4
+basenodeid	96:160:47000580ffde0000000011770000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneEight"
+ports		4
+basenodeid	96:160:47000580ffde0000000011880000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneTwoOne"
+ports		4
+basenodeid	96:160:47000580ffde0000001122110000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneTwoTwo"
+ports		4
+basenodeid	96:160:47000580ffde0000001122220000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneTwoThree"
+ports		4
+basenodeid	96:160:47000580ffde0000001122330000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneTwoFour"
+ports		4
+basenodeid	96:160:47000580ffde0000001122440000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneTwoFive"
+ports		4
+basenodeid	96:160:47000580ffde0000001122550000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneTwoSix"
+ports		4
+basenodeid	96:160:47000580ffde0000001122660000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneTwoSeven"
+ports		4
+basenodeid	96:160:47000580ffde0000001122770000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneTwoEight"
+ports		4
+basenodeid	96:160:47000580ffde0000001122880000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneThreeOne"
+ports		4
+basenodeid	96:160:47000580ffde0000001133110000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneThreeTwo"
+ports		4
+basenodeid	96:160:47000580ffde0000001133220000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneThreeThree"
+ports		4
+basenodeid	96:160:47000580ffde0000001133330000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneThreeFour"
+ports		4
+basenodeid	96:160:47000580ffde0000001133440000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneThreeFive"
+ports		4
+basenodeid	96:160:47000580ffde0000001133550000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneThreeSix"
+ports		4
+basenodeid	96:160:47000580ffde0000001133660000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneThreeSeven"
+ports		4
+basenodeid	96:160:47000580ffde0000001133770000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END
+
+switch		"PGOneThreeEight"
+ports		4
+basenodeid	96:160:47000580ffde0000001133880000000000000000
+Levels		96 0
+		88 0
+		80 0
+		72 0
+		64 0
+		56 0
+		48 0
+		40 0
+		32 0
+		24 0
+		16 0
+		 8 0
+OMNI		false
+ACAC		""
+Logos		""
+Aggregator	""
+END

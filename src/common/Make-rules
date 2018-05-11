@@ -1,0 +1,566 @@
+#-*-makefile-*-
+
+# absolute paths
+#----------------
+#  Make.local defines TOP and OS then includes this file
+
+# if X11 libraries live somewhere else change this
+X11_LIB = /lib
+
+# FORE stuff
+#---------------
+
+FORE:=${shell ${COMMON}/fore_exists.sh}
+
+FORE_INCLUDES = /opt/FOREatm/include
+
+FORE_LIB  = /opt/FOREatm/lib
+FORELINKS = -lfore_aal_${OS}${LIBTYPE} -lfore_io_${OS}${LIBTYPE} -L$(FORE_LIB) $(OS_LDLIBS) 
+FAKELINKS = -lfake_aal_${OS}${LIBTYPE} -lfake_io_${OS}${LIBTYPE}
+
+# targets for those without -- NO RULES HERE, EVER
+#----------------
+all:
+clean::
+depend::
+checkauth:
+checkowner:
+
+# platforms
+#----------------
+# OS is defined in Make.local
+
+BIND_STARTUP  = true
+BIND_SHUTDOWN = true
+
+
+# binaries
+#----------------
+CCC	= g++ ${OPTLEVEL}
+C++     = ${CCC}
+VERSION:=${shell ${COMMON}/compiler_probe.sh ${TOP}}
+
+AR 	= ar
+LD      = ld
+LN	= ln
+# MAKE	= gmake
+CCOPTS  = -D${VERSION} 
+LDOPS	=
+EXECOPTS = -g
+
+LEX	= flex
+LEX_ARGS =
+
+YACC	= bison
+#
+# -d      Write an extra output file containing macro definitions for the
+#     token type names defined in the grammar and the semantic value type
+#     `YYSTYPE', as well as a few `extern' variable declarations.
+#	Fate and One require this and won't work without it.
+#
+# -v     Write an extra output file containing verbose descriptions of the
+#     parser states and what is done for each type of look-ahead token in
+#     that state.
+#	This is optional for both Fate and One.
+#
+YACC_ARGS = -dv
+
+
+IRIX = ${findstring IRIX, ${OS}}
+ifeq (${IRIX},IRIX)
+  RANLIB = true
+else
+  RANLIB = ranlib
+endif
+
+ifeq (${OS},IRIX64)
+#	CCC = CC -KPIC
+endif
+
+ifeq (${OS},SunOS5)
+AR = /usr/ccs/bin/ar
+RANLIB = /usr/ccs/bin/ranlib
+OS_LDLIBS = -lnsl -lans
+endif
+
+help::
+	@cat ${COMMON}/help.txt
+
+   TEMPLATELINKS = -lDS_${OS}${LIBTYPE} -lctorsDS_${OS}
+
+# debugging
+#----------------
+OTYPE = o
+ifeq (${OTYPE},O)
+   ifeq (${OS},SunOS5)
+	LIBTYPE = _debug
+	DEBUGLIBTYPE=_debug
+	CCC = insure -g
+   endif
+endif
+
+LIBTOP=${TOP}
+
+OPTLEVEL=-g
+OBJPATH=
+
+
+#library location
+#-------------------------
+LIBDIR=${LIBTOP}/lib/${OS}
+
+debug:
+	@${MAKE} --no-print-directory OTYPE=O TOP=${TOP} OS=${OS};
+
+# identity
+#----------------
+#USER is defined by SHELL or on make line (e.g. USER=other)
+
+NAME_USER=${USER}
+
+SPECIAL_TAGTYPE = ${findstring _ctors, ${THIS_DIR}}
+ifeq (${SPECIAL_TAGTYPE},_ctors)
+SPECIAL_TAG=ctors
+endif
+
+# library name extensions, linker options
+#-----------------------------------------
+ifeq (${LIB_TYPE},static)
+  LIBEXT = a
+  ifeq (${OS},SunOS)
+        CCOPTS += -fPIC
+  endif
+
+  ifeq ($(OS),SunOS5)
+        CCOPTS += -fPIC
+	override AR = /usr/ccs/bin/ar
+        override RANLIB = true
+  endif
+
+  ifeq (${OS},Linux)
+        CCOPTS += -fPIC
+  endif
+
+  ifeq (${OS},IRIX64)
+           CCOPTS += -elf -w
+  endif
+
+else
+  ifeq (${OS},SunOS)
+        LIBEXT = so.${MAJOR}.${MINOR}
+        CCOPTS += -fPIC
+        LDOPTS += -Bdynamic -assert pure-text
+  endif
+
+  ifeq (${OS},Linux)
+        CCOPTS += -fPIC
+        LIBEXT = so
+        LDOPTS += -shared
+  endif
+
+  ifeq (${OS},IRIX64)
+	LIBEXT = so
+        CCOPTS += -elf -w
+        LDOPTS += -shared -Bdynamic -exports
+  endif
+
+  ifeq ($(OS),SunOS5)
+	LIBEXT = so
+	LD = ${CCC}
+	LDOPTS += -G
+        CCOPTS += -fPIC
+  endif
+
+  ifeq ($(OS),NetBSD)
+        LIBEXT = so.${MAJOR}.${MINOR}
+        LDOPTS += -Bshareable
+        CCOPTS += -fPIC
+  endif
+
+endif
+
+# non-library object files
+#----------------------------
+EXECOBJS = ${EXECSRCS:.cc=.${OTYPE}}
+
+#------------------------------------------------------------
+# specific context sensitive targets
+#------------------------------------------------------------
+
+#
+#------------------------------------------------------------
+# large repeating (twice) actions for depend::
+#------------------------------------------------------------
+#
+# Pass one builds .o files
+# Pass two builds .O (Insure++) files
+# Pass three "builds" .CW (CodeWizard) files 
+#
+# this is really for ctors only
+define DependStatic
+	@if [ `echo ${LIBSRCS} ${CTOR_SRCS} | wc -w` = 0 ]; then \
+		rm -f .depend.lib; touch .depend.lib; \
+	else \
+	  	${CCC} -M ${INCLUDES} ${LIBSRCS} ${CTOR_SRCS} -fMakefile \
+		> .depend.lib; \
+	fi
+	@if [ `echo ${EXECSRCS} | wc -w` = 0 ]; then \
+		rm -f .depend.exec; touch .depend.exec; \
+	else \
+		${CCC} -M ${INCLUDES} ${EXECSRCS} -fMakefile > .depend.exec; \
+	fi;
+	@${COMMON}/dep_${OS} .depend.lib .static \
+		${MODULELIB}\( "${CTOR_OBJS}) ${CTOR_OBJS}";\
+	cat .static .depend.exec |\
+	    sed 's/${MODULE}_ctors\.o//' > .depend_${OS}_; \
+	cp .depend_${OS}_  .depend_${OS};\
+	sed 's/${CTOROBJ}\.o/${CTOROBJ}\.O/g' <.depend_${OS}_ >>.depend_${OS};\
+	sed 's/${CTOROBJ}\.o/${CTOROBJ}\.CW/g'<.depend_${OS}_ >>.depend_${OS};\
+	rm -f .depend.lib .depend.exec .static .depend_${OS}_; \
+	echo "Dependencies updated."; 
+endef
+
+define DependDynamic
+	@if [ `echo ${LIBSRCS} | wc -w` = 0 ]; then \
+		rm -f .depend.lib; touch .depend.lib; \
+	else \
+		${CCC} -M ${INCLUDES} ${LIBSRCS} -fMakefile > .depend.lib; \
+	fi;
+	@if [ `echo ${EXECSRCS} | wc -w` = 0 ]; then \
+		rm -f .depend.exec; touch .depend.exec; \
+	else \
+		${CCC} -M ${INCLUDES} ${EXECSRCS} -fMakefile > .depend.exec; \
+	fi;
+	@${COMMON}/dep_${OS} .depend.lib .dynamic '${OBJDIR}/' ' '; \
+	cat .dynamic .depend.exec > .depend_${OS}_; \
+	cp .depend_${OS}_ .depend_${OS}; \
+	sed 's/\.o :/\.O :/g' <.depend_${OS}_ |	sed 's/\.o:/\.O :/g' \
+	 >>.depend_${OS};\
+	sed 's/\.o :/\.CW :/g' <.depend_${OS}_ | sed 's/\.o:/\.CW :/g' \
+	 >>.depend_${OS};\
+	rm -f .depend.lib .depend.exec .dynamic .depend_${OS}_; \
+	echo "    Dependencies updated."; 
+endef
+
+# some submodules create private libraries placing their .o .O files in
+# ./_o.${OS} (note . and not .. )
+#
+# A submodule should not create .o files in both ../_o.XX and ./_o.XXX
+#
+define CheckObjSubDir
+	@if [ "x${LIBSRCS}" = x ]; then \
+	  echo "WARNING both LIBSRCS and LOCALSRCS defined in `pwd`/Makefile";\
+	fi;
+endef
+define DependSubDir
+	@if [ `echo ${LOCALSRCS} | wc -w` = 0 ]; then \
+		rm -f .depend.lib; touch .depend.lib; \
+	else \
+		${CCC} -M ${INCLUDES} ${LOCALSRCS}  > .depend.lib; \
+	  if [ `echo ${EXECSRCS} | wc -w` = 0 ]; then \
+		rm -f .depend.exec; touch .depend.exec; \
+	  else \
+		${CCC} -M ${INCLUDES} ${EXECSRCS}  > .depend.exec; \
+	  fi;\
+	 ${COMMON}/dep_${OS} .depend.lib .dynamic '${OBJPATH}./_o.${OS}/' ' ';\
+	  cat .dynamic .depend.exec > .depend_${OS}_; \
+	  cp .depend_${OS}_ .depend_${OS}; \
+	  sed 's/\.o *:/\.O :/g' <.depend_${OS}_  >>.depend_${OS};\
+	  sed 's/\.o *:/\.CW :/g' <.depend_${OS}_  >>.depend_${OS};\
+	  rm -f .depend.lib .depend.exec .dynamic .depend_${OS}_; \
+	  echo "    Local Dependencies updated."; \
+	fi
+endef
+#*****------------------------------------
+#*****     SRC (DISTRIBUTION) TREE
+#*****------------------------------------
+define nopushing
+	@echo ""
+	@echo ${NAME_USER}, you can only \'make push\' from within 
+	@echo a module or submodule in your own development branch.
+	@echo ""
+endef
+#----- stable distribution -- pnni/src
+ifeq (${THIS_DIR},src)
+	MODULE = 
+	MODULELIB = 
+	STABLE_INC =
+	DOC_DIR = 
+	BACKUP_DIR = 
+	override OTHER_DEVS =
+push:
+	${nopushing}
+endif
+
+SRCMODULELIBNAME = lib${SPECIAL_TAG}${MODULE}_${OS}${LIBTYPE}.${LIBEXT}
+
+#----- module stable distribution -- pnni/src/module
+ifeq (${PARENT},src)
+	include ./Version
+	MODULE = ${THIS_DIR}
+	MODULELIB = ${LIBDIR}/${SRCMODULELIBNAME}
+	STABLE_INC = ..
+	DOC_DIR = ./doc
+	BACKUP_DIR = ${TOP}/backups
+	OBJDIR = ${OBJPATH}./_o.${OS}
+	override OTHER_DEVS =
+push:
+	${nopushing}
+endif
+
+#----- submodule stable distribution -- pnni/src/module/submodule
+ifeq (${GRANDPARENT},src)
+	include ../Version
+	MODULE = ${PARENT}
+	MODULELIB = ${LIBDIR}/${SRCMODULELIBNAME}
+	STABLE_INC = ../..
+	DOC_DIR = ../doc
+	BACKUP_DIR = ${TOP}/backups
+	OBJDIR = ${OBJPATH}../_o.${OS}
+	override OTHER_DEVS =
+push:
+	${nopushing}
+clean::
+	@if [ "x${LIBSRCS}" != "x" -a "${OBJDIR}/${OBJS}" != "${OBJDIR}/" ];\
+	   then  rm -f ${OBJDIR}/${OBJS}  ${OBJDIR}/${OBJS:%.o=%.O}; fi
+	@if [ x"${EXECSRCS:%.cc=%.o}" != x ]; then \
+	   rm -f ${EXECSRCS:%.cc=%.o} ${EXECSRCS:%.cc=%.O}; fi
+	@rm -f .depend_* *~ core
+	@echo clean done ${MODULE}/${THIS_DIR}
+
+distclean::
+	@rm -rf *.[oO] */*.[oO] *_${OS}*
+	@rm -f .depend_* *~ core
+	@echo clean done ${MODULE}/${THIS_DIR}
+
+# dependencies
+#-------------------
+
+  ifeq (${LIB_TYPE},static)
+
+    depend::		
+	${DependStatic}
+  else
+
+    depend::	
+	${DependDynamic}
+	@if [ -f .needs_depend_local ]; then \
+	    ${MAKE}  --no-print-directory depend_local; \
+	fi
+
+  # static or dynamic
+  endif
+
+endif
+
+
+force:
+
+#------------------------------------------------------------
+# general (non-context sensitive) targets
+#------------------------------------------------------------
+
+IS_A_CTOR_LIB = no
+ifeq (${IS_A_CTOR_LIB},yes)
+
+.CTOR_LIB:	${CTOR_SRCS}
+	echo ${CTOR_SRCS}.$<.$*.$@
+	${AR} cr ${MODULELIB} ${CTOR_OBJS}
+	rm ${CTORMOD}.o
+	${RANLIB} ${MODULELIB}
+	touch .CTOR_LIB
+
+endif
+
+
+# executable object file rules
+#-------------------------------
+
+%.o:  %.cc
+	${CCC} -D__${OS}__ ${CCOPTS} ${EXECOPTS} ${INCLUDES} -c $< -o $*.o
+
+
+%.o:  %.c
+	${CCC} -D__${OS}__ ${CCOPTS} ${EXECOPTS} ${INCLUDES} -c $< -o $*.o
+
+# library object files destination directory
+#---------------------------------------------
+# mkdir -p creates any missing imtermediate directories
+# this works on SunOS, Solaris, IRIX and Linux
+
+ifneq (x${OBJDIR},x)
+${OBJDIR}:
+	@if [ ! -d ${OBJDIR} ]; then \
+		echo Making target directory for library objects: ${OBJDIR}; \
+		mkdir -p ${OBJDIR}; \
+	fi;
+endif
+ifneq (x${LIBDIR},x)
+${LIBDIR}:
+	@if [ ! -d ${LIBDIR} ]; then \
+		echo Making target directory for library files: ${LIBDIR}; \
+		mkdir -p ${LIBDIR}; \
+	fi;
+endif
+
+# compilation rules
+#---------------------
+OLIBRARIES = \
+ ${addprefix -l,${addsuffix _${OS}${DEBUGLIBTYPE}, ${OTHER_MODULES}}} \
+ ${addprefix -l,${addsuffix _${OS}${DEBUGLIBTYPE}, ${addprefix ctors,${OTHER_MODULES}}}} 
+
+LINKS += ${DEV_LINK} -L. -L.. -L${LIBDIR} 
+#-lGeneric_${OS}
+
+ifneq (x${MODULE},x)
+LINKS+= -l${MODULE}_${OS}${DEBUGLIBTYPE} -lctors${MODULE}_${OS}${DEBUGLIBTYPE}
+endif
+
+# on IRIX64 sharable libraries are only loaded for immediate unresolved
+# this requires that we repeat interdependent libraries.
+ifeq (${OS},IRIX64)
+  LINKS += ${LIBRARIES} ${OLIBRARIES} ${OLIBRARIES}
+else
+  LINKS += ${LIBRARIES} ${OLIBRARIES}
+endif
+
+
+ifneq (x${MODULE},x)
+	LINKS += -l${MODULE}_${OS}${DEBUGLIBTYPE}
+endif
+
+#
+# NetBSD doesn't have -ldl
+#
+LINKS += ${TEMPLATELINKS} ${GCLIB} -lm -lc
+
+ifneq (${OS},NetBSD)
+LINKS += -ldl
+endif
+
+ifeq (${OS},NetBSD)
+   RLINKS = -R.:..:../..:../../..:${LIBDIR}
+   LINKS += ${RLINKS}
+endif
+
+ifeq (${OS},SunOS5)
+   RLINKS = -R.:..:../..:../../..:../../lib:../../../lib:${LIBDIR}
+   LINKS += -lsocket ${RLINKS}:${X11_LIB}
+endif
+
+ifeq (${OS},Linux)
+   RLINKS = -Xlinker -rpath -Xlinker .:..:../..:../../..:${LIBDIR}${TMP_LINKS}
+   LINKS += ${RLINKS}
+endif
+
+ifeq (${OS},IRIX64)
+   RLINKS = -rpath  .:..:../..:../../..:../../lib:../../../lib:${LIBDIR}${TMP_LINKS}
+   LINKS += ${RLINKS}
+endif
+
+
+INCLUDES += -I. -I.. ${DEV_INCLUDES}\
+	${addprefix -I,${STABLE_INC}}
+
+.SUFFIXES : .o .cc .O
+
+# static library compile rules
+#--------------------------------
+ifeq (${LIB_TYPE},static)
+
+OBJS = ${LIBSRCS:.cc=.${OTYPE}}
+
+ifeq (x${OBJS},x)
+LIBOBJS = 
+else
+LIBOBJS = ${MODULELIB}(${addprefix ${OBJDIR}/,${OBJS}})
+endif
+
+BIND =       ${RANLIB} ${MODULELIB}
+BINDMODULE = ${RANLIB} ${MODULELIB}
+
+
+ifeq (${IS_A_CTOR_LIB},yes)
+
+  ${CTOR_OBJS}: ${CTOR_SRCS}
+	${CCC} -D__${OS}__ ${CCFLAGS} ${CCOPTS} ${INCLUDES} -c $< -o $@
+
+  ${MODULELIB}(${CTOR_OBJS}): ${OBJDIR} ${CTOR_OBJS}
+	@${BIND_STARTUP}
+	${AR} cr ${MODULELIB} ${CTOR_OBJS}
+	${RANLIB} ${MODULELIB}
+
+else
+  ifneq (${MODULE_LEVEL},MODULE)
+    ${MODULELIB}: ${LIBDIR} ${OBJDIR} ${LIBOBJS} 
+	@${BIND_STARTUP}
+	${BIND}
+	@${BIND_SHUTDOWN}
+  endif
+  ${MODULELIB}(${OBJDIR}/%.o):  %.cc
+	${CCC} -D__${OS}__ ${CCFLAGS} ${CCOPTS} ${INCLUDES} -c \
+		$< -o ${OBJDIR}/$*.o
+	${AR} cr $@ ${OBJDIR}/$*.o
+	rm ${OBJDIR}/$*.o
+
+  ${MODULELIB}(${OBJDIR}/%.O):	%.cc
+	${CCC} -D__${OS}__ ${CCFLAGS} ${CCOPTS} ${INCLUDES} -c \
+		$< -o ${OBJDIR}/$*.O	
+	${AR} cr $@ ${OBJDIR}/$*.O
+	rm ${OBJDIR}/$*.o
+endif
+
+else # not static = dynamic
+
+# dynamic library compile rules
+#----------------------------------
+OBJS = ${addprefix ${OBJDIR}/, ${LIBSRCS:.cc=.${OTYPE}}}
+BIND = 	     ${LD} ${LDOPTS} ${OBJDIR}/*.${OTYPE} -o ${MODULELIB}
+BINDMODULE = ${LD} ${LDOPTS} ${OBJDIR}/*.${OTYPE} -o ${MODULELIB}
+
+  ifneq (${MODULE_LEVEL},MODULE)
+    ${MODULELIB}: ${LIBDIR} ${OBJDIR} ${OBJS} 
+	@${BIND_STARTUP}
+	${BIND}
+	@${BIND_SHUTDOWN}
+  endif
+
+${OBJDIR}/%.o:	%.cc
+	${CCC} -D__${OS}__ ${CCFLAGS} ${CCOPTS} ${INCLUDES} -c \
+		$< -o ${OBJDIR}/$*.o
+
+${OBJDIR}/%.O:	%.cc
+	${CCC} -D__${OS}__ ${CCFLAGS} ${CCOPTS} ${INCLUDES} -c \
+		$< -o ${OBJDIR}/$*.O
+
+endif
+
+
+# linking, for use in module 'make all' - not any more 
+#------------------------------------------
+link-only:
+	${BINDMODULE}
+	@echo Linking done with \'${BINDMODULE}\'
+
+remove_lib:
+	@rm -f ${MODULELIB}
+	@rm -f `echo ${MODULELIB} | sed -e 's/${OS}/${OS}_debug/'`
+
+lines-of-code:
+	@echo "Lines of code: " \
+	`grep -v '^[ \t]*$$' ${TOP}/src/*/*/*.cc ${TOP}/src/*/*/*.h | wc -l` ;
+	@echo "Comment Lines: " \
+	`cat ${TOP}/src/*/*/*.h ${TOP}/src/*/*/*.cc | grep // | wc -l`;
+
+local-lines-of-code:
+	@echo "Lines of code: " \
+	`grep -v '^[ \t]*$$' *.cc *.h | wc -l` ;
+	@echo "Comment Lines: " \
+	`cat *.h *.cc | grep // | wc -l`;
+
+
+ifeq (${GRANDPARENT},src)
+#include ./.depend_${OS}
+include ${COMMON}/Make.depend
+endif
+

@@ -1,0 +1,24 @@
+CHILDREN = ${shell (/bin/ls | grep -v '\#')}
+
+include Make.local
+
+all:  ${CHILDREN}
+	@echo gmake all is done.
+
+${CHILDREN}: force_make_in_sub_dir
+	@dir=$@; \
+	if [ -d $$dir ]; then \
+		if [ -f $$dir/Makefile ]; then \
+		    if [ "$$dir" = "${THIS_DIR}" ]; then \
+			echo -n; \
+		    else \
+			cd $$dir; \
+			echo "entering $$dir..."; \
+			${MAKE} --no-print-directory; \
+			echo status = $$?; if [ $$? ]; then exit 1; fi; \
+			cd ..; \
+		     fi; \
+		fi; \
+	fi;
+
+force_make_in_sub_dir:

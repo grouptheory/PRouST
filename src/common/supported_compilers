@@ -1,0 +1,7 @@
+2.7.2        __CCC_GCC_272__     gcc-2.7.2
+egcs-2.90    __CCC_GENERIC__     gcc-2.90/egcs-1.0.3
+egcs-2.91.57 __CCC_EGCS_29__     gcc-2.91/egcs-1.1a
+egcs-2.91.6  __CCC_GCC_272__     gcc-2.91.60/egcs-1.1.1
+egcs-1.1.1   __CCC_GCC_272__     gcc-2.91.58/egcs-1.1.1 prerelease
+default      __CCC_GENERIC__     generic-ANSI-compliant-C++-compiler
+

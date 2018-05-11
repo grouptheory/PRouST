@@ -1,0 +1,33 @@
+//---------------- example 2
+configuration "Configuration.nfo";
+
+timeseq doitnow = explicit(0.0);	
+timeseq A_roughly1persec = uniform(1.0, 10.0, 1.0, 0.5);
+timeseq B_roughly1persec = uniform(1.0, 10.0, 1.0, 0.5);
+	
+group net = { switch };
+selector pick = [ (net) ];
+
+proc init {
+  diag SIM DIAG_ERROR;
+  diag FSM DIAG_ERROR;
+  diag CODEC DIAG_ERROR;
+  diag FW DIAG_ERROR;
+}
+
+proc makeone {
+  switch newsw = birth switch ( "PGOne" );
+  group net += newsw;
+}
+	
+proc killone {
+  switch victim = choose pick;
+  group net -= victim;
+  death switch victim;
+}
+	
+begin
+doitnow call init;
+A_roughly1persec call makeone;
+B_roughly1persec call killone;
+end 1000.0

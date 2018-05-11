@@ -1,0 +1,16 @@
+
+# WARNING  This is a symbolic link to the Version file for 
+# this module.  The actual Version file is in the /src tree.
+
+# If you want to change this file: (1) you must change the
+# original file in the src tree. (2)  Be sure to inform any 
+# developers working onsub modules of this library.
+
+# The LIB_TYPE can be either: static | dynamic
+
+LIB_TYPE = dynamic
+
+MAJOR = 0
+MINOR = 0
+
+

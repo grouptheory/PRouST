@@ -1,0 +1,189 @@
+// A=======B
+// - oc12 internal: A
+//   oc3 internal: B
+//   SVC needs oc12
+//   higher structure: (AB)
+//program verbatim;
+configuration "Configuration.nfo";
+
+#include <fsm/visitors/FastUNIVisitor.h>
+#include <sim/acac/ACAC_DIAG.h>
+#include <fsm/hello/Hello_DIAG.h>
+
+// Explicit timer which triggers at simulation time 0
+timeseq t1 = explicit(0.0);
+// Explicit timer which triggers at simulation time 1
+timeseq t2 = explicit(1.0);
+// Explicit timer which triggers at simulation time 1.5
+timeseq t3 = explicit(1.5);
+// Periodic timer for call setups
+timeseq t4 = periodic(100.0,  300.0, 25.0);
+
+// Peer Groups
+group PGOne   = { switch };
+group PGTwo   = { switch };
+group PGSetup = { switch };
+
+// random selectors
+selector selOne   = [ (PGOne) ];
+selector selTwo   = [ (PGTwo) ];
+selector selSetup = [ (PGSetup) ];
+
+%{
+void FirstVerbatimTest(void)
+{
+	cout << "This is a test of the VERBATIM block" << endl;
+	cout << "Look, Ma!  No hands!" << endl;
+	cout << "argv[0]=\"" << internal_argv[0] << "\"" << endl;
+	if (internal_argc > 1)
+	  cout << "argv[1]=\"" << internal_argv[1] << "\"" << endl;
+}
+%}
+
+
+proc Init {
+  // Set all diagnostics to ERROR
+  diag FW                 DIAG_ERROR;
+  diag FSM                DIAG_ERROR;
+  diag CODEC              DIAG_ERROR;
+  diag SIM                DIAG_ERROR;
+  diag FSM_FORWARDER      DIAG_INFO;
+  diag SIM_LOGOS          DIAG_INFO;
+  diag SIM_LEADERSHIP     DIAG_INFO;
+  diag SIM_ACAC           DIAG_INFO;
+  diag SIM_ACAC_CALL_ADMISSION DIAG_DEBUG;
+  diag SIM_ACAC_CALL_RELEASE DIAG_DEBUG; 
+  // diag FSM_HELLO_PHYSICAL DIAG_DEBUG;
+  //  diag FSM_ELECTION       DIAG_DEBUG;
+}
+
+%{
+void SecondVerbatimTest(void) {
+	cout << "This is the second test of the VERBATIM block" << endl;
+	cout << "Look, Ma!  No feet!" << endl;
+	if (internal_argc > 2)
+	  cout << "argv[2]=\"" << internal_argv[2] << "\"" << endl;
+
+}
+%}
+
+// degree-1 PG
+proc makeFirstPG {
+
+  switch one = birth switch ("PGOne");
+  group PGOne += one;
+
+  switch two = birth switch ("PGOne");
+  group PGOne += two;
+}
+
+%{
+void ThirdVerbatimTest(void) {
+	cout << "This is the third test of the VERBATIM block" << endl;
+	cout << "Look, Ma!  No feet!" << endl;
+	if (internal_argc > 3)
+	  cout << "argv[3]=\"" << internal_argv[3] << "\"" << endl;
+}
+%}
+
+%{
+void FourthVerbatimTest(void)
+{
+	cout << "This is the fourth test of the VERBATIM block" << endl;
+	cout << "Look, Ma!  No hands!" << endl;
+	if (internal_argc > 4)
+	  cout << "argv[4]=\"" << internal_argv[4] << "\"" << endl;
+}
+
+void FifthVerbatimTest(void)
+{
+	cout << "This is the fifth test of the VERBATIM block" << endl;
+	cout << "Look, Ma!  No hands!" << endl;
+	if (internal_argc > 5)
+	  cout << "argv[5]=\"" << internal_argv[5] << "\"" << endl;
+}
+%}
+// degree-1 PG
+proc makeSecondPG {
+
+  switch one = birth switch ("PGTwo");
+  group PGTwo += one;
+
+  switch two = birth switch ("PGTwo");
+  group PGTwo += two;
+}
+
+proc makeSwitches {
+
+%{
+  cout << endl;
+  cout << "makeSwitches is calling the verbatim functions" << endl;
+  FirstVerbatimTest();
+  SecondVerbatimTest();
+  ThirdVerbatimTest();
+  FourthVerbatimTest();
+  FifthVerbatimTest();
+  cout << "makeSwitches is though calling the verbatim functions" << endl;
+  cout << endl;
+%}
+  call makeFirstPG;
+  call makeSecondPG;
+}
+
+proc makeLinks {
+
+  // Extract all of PGOne's members
+  switch pg1s1 = choose selOne;
+  group  PGOne -= pg1s1;
+  switch pg1s2 = choose selOne;
+  group  PGOne -= pg1s2;
+
+  // Setup all the links within PGOne
+  link a = birth link(pg1s1, pg1s2, "OC12");
+
+  // ----------------------------------
+
+  // Extract all of PGTwo's members
+  switch pg2s1 = choose selTwo;
+  group  PGTwo -= pg2s1;
+  switch pg2s2 = choose selTwo;
+  group  PGTwo -= pg2s2;
+
+  // Setup all the links within PGTwo
+  link b = birth link(pg2s1, pg2s2, "OC3");
+
+  // ---------------------------------
+
+  // Inter-PeerGroup links
+  link c = birth link(pg1s1, pg2s1, "OC12");
+
+  // now place them all back into their groups
+  group  PGOne += pg1s1;
+  group  PGOne += pg1s2;
+
+  group  PGTwo += pg2s1;
+  group  PGTwo += pg2s2;
+
+  // special case for routing
+  group PGSetup += pg1s2;  // Source
+  group PGSetup += pg2s2;  // Destination
+}
+
+proc makeConnectionFromOnetoTwo {
+
+  switch source = choose selSetup;
+  group PGSetup -= source;
+  switch destination = choose selSetup;
+  group PGSetup += source;
+
+  inject source with FastUNIVisitor(source, destination, 
+				    FastUNIVisitor::FastUNISetup, 
+				    "/tmp/dtl-route", 1283607); // requires 3.5 * OC3 (almost OC12)
+}
+
+begin
+t1 call Init;                        // Time 0.0
+t2 call makeSwitches;                // Time 1.0
+t3 call makeLinks;                   // Time 1.5
+t4 call makeConnectionFromOnetoTwo;  // Periodic starting at time 100.0
+end 1000.0                           // End at Time 1,000

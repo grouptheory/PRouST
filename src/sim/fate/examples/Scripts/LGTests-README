@@ -1,0 +1,154 @@
+
+I really dont see how to test crankback due to poor aggregation
+and NSP-based logos routing without 3 levels. Here's my short list.
+They may not be the simplest way to test, but the concept of
+each scenario is described.  You should work with Jack to put together
+a test suite of examples that can diagnose themselves (or at least
+can be used by humans to test whether the software is working).
+
+
+each PG looks like
+border nodes have the arrow for the uplink.
+
+degree-1 PG
+
+           4
+           |
+           2---3-->
+
+degree-2 PG
+
+           4
+           |
+    <--1---2---3-->
+
+degree-3 PG
+
+           4
+           |
+    <--1---2---3-->
+           |
+           5-->
+           
+
+Conventions: 
+o Nodes within a PG are numbered.
+o PGs are given letter names.
+o The address structure among PGs is shown by parenthetical notation
+  e.g. ((AB)(CD))((EF)(GH)) is an 8 leaf complete binary tree
+  address structure.
+
+The PGL is always node 2: a non-border-node.
+User SVC endpoint is always node 4: a non-PGL, non border-node.
+Nodes 1,3,5 when present are border nodes
+All interPG links are oc12
+All PGLs always originate oc12 radius NSP
+The SVCs is setup from A.4 to C.4 in each of the following topologies
+
+I) bandwidth shortage, 
+   non-crankback failure
+
+   higher structure: (ABDC)
+
+    A=======B=======D======C
+
+    - oc12 internal: A,B,D
+      oc3 internal: C
+      SVC needs oc12
+
+II) bandwidth shortage, 
+    crankback to source, failure
+
+   higher structure: (ABD)(C)
+
+    A=======B=======D======C
+
+    - oc12 internal: A,B,C
+      oc3 internal: D
+      SVC needs oc12
+
+III) bandwidth shortage, 
+     crankback in intermediate PG, failure
+
+     higher structure: (A)(BD)(C)
+
+     A=======B=======D======C
+
+    - oc12 internal: A,B,C
+      oc3 internal: D
+      SVC needs oc12
+
+IV) bandwidth shortage, 
+    crankback in final PG, failure
+
+     higher structure: (A)(BDC)
+
+    A=======B=======D======C
+
+    - oc12 internal: A,B,C
+      oc3 internal: D
+      SVC needs oc12
+
+VI) bandwidth shortage, crankback to border in intermediate PG, 
+    alternate route selection
+
+     higher structure: (AE)(BDFG)(CH)
+
+    A=======B=======D======C
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    E=======F=======G======H
+
+    - oc12 internal: A,B,C,E,F,G,H
+      oc3 internal: D
+      SVC needs oc12
+
+VII) bandwidth shortage, crankback to border in final PG, 
+     alternate route selection
+
+     higher structure: (AE)(BFDGCH)
+
+    A=======B=======D======C
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    E=======F=======G======H
+
+    - oc12 internal: A,B,C,E,F,G,H
+      oc3 internal: D
+      SVC needs oc12
+
+VIII) bandwidth shortage, crankback to source
+      alternate route selection
+      (AEBFDG)(CH)
+
+    A=======B=======D======C
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    E=======F=======G======H
+
+    - oc12 internal: A,C,D,E,F,G,H
+      oc3 internal: B
+      SVC needs oc12
+
+IX) Mystery Puzzler
+    (AEBF)(DGCH)
+
+    A=======B=======D======C
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    ||      ||      ||     ||
+    E=======F=======G======H
+
+    - oc12 internal: A,B,C,G,H
+      oc3 internal: D,E,F
+      SVC needs oc12
+
+
+

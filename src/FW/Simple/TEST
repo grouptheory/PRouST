@@ -1,0 +1,18 @@
+#!/bin/csh
+
+echo "Running example1_SunOS"
+example1_SunOS 10
+
+echo "Running example2_SunOS"
+example2_SunOS 10
+
+echo "Running example3_SunOS"
+example3_SunOS 0 10
+
+if ( -f example4_SunOS ) then
+  echo "Running example4_SunOS"
+  example4_SunOS 10
+endif
+
+echo "Done."
+

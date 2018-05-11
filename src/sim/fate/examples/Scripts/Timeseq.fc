@@ -1,0 +1,23 @@
+// -*- Fate -*-
+configuration "Configuration.nfo";
+
+timeseq every1sec      = periodic('timeseq.periodic.every1sec', 0, 100, 1);
+timeseq roughly1persec = uniform('timeseq.uniform.roughly1persec', 0, 100, 10);
+timeseq primetime      = explicit('timeseq.explicit.primetime', 
+	2, 3, 5, 7, 11, 13, 17);
+timeseq poissontime    = poisson('timeseq.poisson.poissontime', 0, 100, 2);
+
+proc PeriodicProc { }
+
+proc UniformProc { }
+
+proc ExplicitProc { }
+
+proc PoissonProc { }
+
+begin
+  every1sec      call PeriodicProc;
+  roughly1persec call UniformProc;
+  primetime      call ExplicitProc;
+  poissontime    call PoissonProc;
+end 110

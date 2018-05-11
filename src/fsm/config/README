@@ -1,0 +1,187 @@
+$Id: README,v 1.1 1999/02/25 00:02:57 talmage Exp $
+
+This README file describes a language for describing switches, links,
+and calls.  The language is used by the Configurator, an object for
+storing switch, link, and call configurations that running programs
+can access.  The Configurator is used by FATE programs in
+sim/fate/examples/Scripts and by the switch and link building
+functions in sim/switches.
+
+A Configurator file consists of an arbitrary sequence of switch, link,
+and call configurations.  Within a configuration, there are no
+optional parts; all parts must be specified.  The Configurator parser
+is not case sensitive, so feel free to capitalize the reserved words
+as you wish.  There must be some white space between elements of a
+configuration.  Comments are indicated by two slashes (//) and theey
+continue to the end of the line.
+
+Each configuration must have a name that is unique among
+configurations of its type.  For example, there cannot be two switch
+configurations with the name "PRouST".  However, there can be a switch
+configuration, a link configuration, and a call configration each with
+the name "PRouST".
+
+
+1. Switch Configurations
+A switch configuration has a name, some number of physical ports
+(Ports), a node ID (BaseNodeID), a series of level-parent pairs
+(Levels), a flag that says whether or not to use a global routing
+object (Omni), and the names of the plugins for call admission
+(ACACPlugin), routing (LogosPlugin), and aggregation
+(AggregatorPlugin) policies.
+
+Any user of the Configurator is responsible for providing unique node
+IDs for each switch it creates.  The base node ID is the starting
+point.  The user must alter it to guarantee uniqueness.
+
+The levels are pairs of integers that represent the level of the node
+in the peer group hierarchy and the node's peer group leadership
+priority at that level.  There must be at least such one pair of
+integers in the levels part of each switch configuration
+
+The omni portion tells whether or not to use global routing.  If omni
+is false, each switch does its own routing.  If omni is true, each
+switch uses the global router.
+
+The plugins provide the prefixes of the ACAC, Logos, and Aggregator
+policy plugins.  These are described in sim/acac, sim/logos, and
+sim/aggregator, respectively.  The empty string, "", is perfectly
+acceptable.  It indicates the use of the built-in policies.
+
+Switch <string>
+	Ports			<integer>
+	BaseNodeID		<nodeid>
+	Levels
+				<integer>	<integer>
+				...
+	Omni			<boolean>
+	ACACPlugin		<string>
+	LogosPlugin		<string>
+	AggregatorPlugin	<string>
+End
+
+<string> is some series of characters surrounded by double-quotes(").  For example,
+
+	"PRouST"
+	"Fred"
+
+<boollean> : true | false
+
+<nodeid> is a decimal integer followed by a colon, another decimal
+integer, another colon and a series of 40 hexidecimal digits.  The
+first integer indicates the physical level of the node.  It must be
+less than 104.  The second integer indicates the child level.  It must
+be greater than the first integer and less than or equal to 160.  The
+40 hexidecimal digits indicate the NSAP.  For example, 
+
+	96:160:47000580ffde0000000000110000000000000000
+
+
+
+Example.
+
+This example switch configuration is named "Test1".  It has five
+ports.  It uses its own router.  It uses plugins with the prefix
+"NRL".
+
+switch "Test1"
+ports	5
+basenodeid 96:160:47000580ffde0000000000110000000000000000
+Levels
+	160 0
+	96 0
+OMNI	false
+ACAC	"NRL"
+Logos	"NRL"
+Aggregator "NRL"
+END
+
+
+2. Link Configurations
+
+A link configuration has a name, an aggregation token, and a series of
+RAIGs.  Each RAIG indicate the bandwidth available to a collection of
+PNNI service classes.
+
+Link	<string>
+AggregationToken	<integer>
+
+{<service class sequence>}	acr <integer> cdv <integer> 
+				clr_0 <integer> clr_01 <integer> 
+				ctd <integer> mcr <integer> weight <integer>
+...
+
+End
+
+<service classes> : <service class> | <service classes> <service class>
+<service class> : cbr | nrtvbr | rtvbr | ubr | abr | gcac_clp
+
+
+Example.
+
+This link configuration is named "link-one".  Its aggregation token is
+zero.  It has two RAIGs.  One RAIG is for the service classes rtvbr
+and nrtvbr.  The other RAIG is for the service classes cbr, abr, and
+ubr.
+
+link "link-one"
+AggregationToken 0
+{rtvbr nrtvbr} acr 1412830 cdv 182 clr_0 8 clr_01 8 ctd 202 mcr 1412830 weight 5400
+{cbr abr ubr} acr 1412830 cdv 182 clr_0 16 clr_01 16 ctd 404 mcr 1412830 weight 5400
+end
+
+
+3. Call Configurations
+
+A call configuration has a name, a broandband bearer class, an
+end-to-end transit delay, an extended quality of service, a quality of
+service, and a traffic descriptor.
+
+Call	<string>
+	BBC class <bbc class> clipping <boolean> connection <connection type>
+	atc <atc type>
+	E2ETD cumulative <integer>  maximum <integer> net_gen_ind <integer>
+	ExtQoS	forward ccdv <integer> cdv <integer> clr <integer>
+		backward ccdv <integer> cdv <integer> clr <integer>
+	QoS	forward <integer> backward <integer>
+	TrafficDescriptor <traffic descriptor>
+End
+
+<atc type>:		cbr | cbr_4 | crb_6 | cbr_clr | 
+			rtvbr | rtvbr_1 | rtvbr_clr | 
+			nrtvbr | nrtvbr_0 | nrtvbr_2 | nrtvbr_8 | nrtvbr_clr |
+			 abr
+
+<bbc class>:		unknown | a | c | x | vp
+<connection type>:	p2p | p2mp
+
+
+<traffic descriptor>: tpc1	forward pcr_0 <integer> prc_01 <integer>
+			 	backward pcr_0 <integer> prc_01 <integer>
+		| tpc2	forward pcr_0 <integer> pcr_01 <integer>
+			backward pcr_0 <integer> pcr_01 <integer>
+
+		| tpc3	forward pcr_01 <integer> scr_0 <integer> mbs_0 <integer)
+			backward pcr_01 <integer> scr_0 <integer> mbs_0 <integer)
+		| tpc4	forward pcr_01 <integer> scr_0 <integer> mbs_0 <integer>
+			backward pcr_01 <integer> scr_0 <integer> mbs_0 <integer>
+		| tpc5	forward pcr_01 <integer> backward pcr_01 <integer>
+		| tpc6	forward pcr_01 <integer> scr_01 <integer> mbs_01 <integer>
+			backward pcr_01 <integer> scr_01 <integer> mbs_01 <integer>
+		| tpc7	forward pcr_01 <integer> backward pcr_01 <integer>
+		| tpc8	forward pcr_01 <integer> mcr_01 <integer>
+			backward pcr_01 <integer> mcr_01 <integer>
+
+
+Example.
+
+This call configuration is named "BBC-class-A-p2p".  Its BBC is for class A.
+
+call "BBC-class-A-p2p"
+BBC	class A clipping false connection p2p atc cbr
+e2etd	cumulative 100 maximum 10 net_gen_ind 1
+ExtQoS	forward ccdv 1 cdv 2 clr 3 backward ccdv 4 cdv 5 clr 6
+QoS	forward 0 backward 0
+TrafficDescriptor	tpc1	forward pcr_0 1 pcr_01 2 
+				backward pcr_0 3 pcr_01 4
+end

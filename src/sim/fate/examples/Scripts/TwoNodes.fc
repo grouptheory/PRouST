@@ -1,0 +1,65 @@
+// Single PG with 2 nodes
+configuration "Configuration.nfo";
+
+#include <sim/investigators/GSynchronyInvestigator.h>
+#include <fsm/netstats/NetStatsCollector.h>
+#include <fsm/omni/Omni.h>
+
+// NOTE:  Until this is fixed you need to replace _SunOS5
+//        with your os name (uname -s)
+library "../../libInvestigators_SunOS5";
+
+// Explicit timer which triggers at simulation time 0
+timeseq t0 = explicit(0.0);
+timeseq t1 = explicit(0.48, 20.0);
+
+// Peer Groups
+group PGOne   = { switch };
+
+// random selectors
+selector selOne   = [ (PGOne) ];
+
+// degree-1 PG
+proc makePGOne {
+  // Set all diagnostics to ERROR
+  diag FW                 DIAG_ERROR;
+  diag FSM                DIAG_ERROR;
+  diag CODEC              DIAG_ERROR;
+  diag SIM                DIAG_ERROR;
+  diag OMNI               DIAG_ERROR;
+  diag FSM_NODEPEER       DIAG_DEBUG;
+
+  %{
+    char gs_name[64];
+    sprintf(gs_name, "gsync.%s", stripSlash( internal_argv[0] ));
+    theNetStatsCollector().RegisterInvestigator( new GSynchronyInvestigator( gs_name, 5 ) );
+  %}
+  
+  switch one = birth switch ( "PGOne", 96:47000580ffde00000000001100 );
+  group PGOne += one;
+
+  switch two = birth switch ( "PGOne", 96:47000580ffde00000000001100);
+  group PGOne += two;
+
+  link a = birth link(one, two, "OC12");
+}
+
+proc checkCert {
+
+  %{
+    char filename[64];
+    sprintf( filename, "discord.%s", stripSlash(internal_argv[0]));
+    ofstream ofs( filename );
+
+    theOmni().setCertificationMode(true);
+    int numnodes;
+    theOmni().FullConvergenceTest( numnodes );
+    ofs << theOmni().getCertificate();
+    theOmni().setCertificationMode(false);
+  %}
+}
+
+begin
+t0 call makePGOne;                   // Time 0.0
+t1 call checkCert;                   // Time 1.50
+end 100.0                            // End at Time 100

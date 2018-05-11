@@ -1,0 +1,7 @@
+
+	 Visualizer Help
+         ~~~~~~~~~~~~~~~
+
+Press U or Shift to ungroup nodes.
+Press ESC to return to normal mode.
+

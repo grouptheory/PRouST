@@ -1,0 +1,32 @@
+# -*- makefile -*-
+#
+# QT can be obtained from http://www.troll.no
+#
+# NV is known to work with version 1.42 -- no other version has been tried
+#
+#
+# QT_ROOT must be nun-null even if it isn't used by QT_INC etc
+#
+QT_ROOT =
+
+#
+# QT_INC is the directory where the QT include files can be found
+#
+QT_INC  = ${QT_ROOT}/include
+
+#
+# QT_LIB is the directory where the QT libraries can be found
+#
+QT_LIB  = ${QT_ROOT}/lib/${OS}
+
+#
+# QT_libname is the library root name as used in ld -l.. 
+# in our setup we keep libraries for multiple architectures in the same
+# directory and distigush between them using ${OS} (roughly `uname -s`)
+#
+QT_libname = qgl -lqt
+
+#
+# the program that converts SLOTS in to code -- 
+#
+QT_MOC  = ${QT_ROOT}/bin/${OS}/moc

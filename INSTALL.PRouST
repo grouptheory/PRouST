@@ -1,0 +1,124 @@
+
+			     Installation
+
+PRouST is available from the PRouST web page, which is located at
+http://cmf.nrl.navy.mil/CCS/projects/public/proust/
+
+To unpack PROUST, uncompress it and then unpack the tar file as follows
+
+% gunzip PRouST-1.0.tar.gz
+% tar xvf PRouST-1.0.tar
+or
+% gtar zxvf PRouST-1.0.tar.gz
+
+
+			    Disk Space Requirements
+
+Untared the distribution uses a little less than 8 Mbytes of diskspace.
+
+The disk space needed to completely make PRouST varies widely amoung
+the various supported operating systems and compilers. The least is
+32M for Linux with g++ 2.7.2.1 and the most was 100M for IRIX64 with
+egcs 2.91.60 (egcs 1.1.1).
+
+			    Compiling PROUST
+
+PRouST is mostly self-configuring.  The libraries in the PRouST
+distribution are known to compile using g++ on SunOS5.x, various
+flavors of Linuxs, and NetBSD1.3.x.  Our main development cycles have
+been on SunOS5.6.
+
+We used the following versions of g++ on the following platforms.
+
+Compiler				Platform
+--------				--------
+g++ 2.7.2.1				SuSE Linux 2.0.35
+g++ 2.7.2.2				SunOS 5.6 (Solaris 2.6)
+g++ 2.7.2.3				Caldera Linux 2.0.33
+g++ 2.90				Red Hat Linux 5.2
+g++ 2.91.57/egcs-1.1a
+g++ 2.91.58/egcs-1.1.1 prerelease	NetBSD 1.3H
+g++ 2.91.60/egcs-1.1.1			IRIX64, SunOS 5.6
+
+
+In addition to g++, PRouST requires gmake 3.76, flex 2.54, and bison
+1.25.  PRouST also requires a version of awk that supports the 
+-v FOO=BAR option on the command line; gawk 2.15 suffices.
+
+If your platform doesn't have the X11 libraries in /lib, then you must
+edit src/common/Make-rules.  Change X11_LIB to point to your X11
+library directory.
+
+The PRouST visualization tools require two additional libraries.  NV,
+visualizer, and omni-vis require QT 1.4.2.  omni-vis also requires
+MESA 3.0 or another OpenGL 1.1 compliant implementation and the OpenGL
+toolkit, GLUT (it also requires that you make the Qt extension qgl.
+See the Qt documentation regarding its OpenGL widget, located in the
+extensions subdirectory of Qt).
+
+If you don't have gawk but do have a version of awk that supports
+variable assignment on the command line, then you must edit two files
+before you can compile PRouST.  Change "gawk" in
+src/common/compiler_probe.sh and src/sim/fate/compile.sh to the name
+of your version of awk.
+
+If you are building PRouST on one of the supported architectures you
+may create the libraries by
+
+% cd PRouST-1.0/src
+% gmake library
+
+Note that if gmake is available as make, you may use make in place of
+gmake. 
+
+Once the libraries have been created you may build the simulation
+builder by
+
+% cd PRouST-1.0/src/sim/fate
+% gmake
+
+then
+
+% cd examples
+
+The example programs are written in the fate language and have an .fc
+extension.  To create executable foo 
+
+% gmake foo
+
+This will produce foo_YOUR_OS.
+
+--------
+
+If you wish to run the visualizer, NV, you will need to edit
+PRouST-1.0/src/FW/NV/QT_config, specifying the location of the Qt
+libraries and header files.  Then build NV by
+
+% cd PRouST-1.0/src/FW/NV
+% gmake
+
+		 Porting PRouST to Other Architectures
+
+If you are attempting to port PRouST to another UNIX, you can begin by
+
+% cd PRouST-1.0/src
+% gmake
+
+You will need to know how to construct shareable libraries on your
+architecture; this is done in src/common/Make-rules.  To resolve any
+prototyping problems you will need to modify src/common/cprototypes.h
+and create src/common/cproto_YOUR_OS.h
+
+There are 4 major directories under src/, DS, FW, codec, and sean.  In
+addition there is src/common where parts of the makefile structure and
+auxiliary scripts and programs are kept.
+
+In order to support multiple operating systems, the object files
+needed to make the libraries are put into directories whose names are
+OS dependent, in each of the major directories -- for example
+src/DS/_o.SunOS5 contains the Solaris compiled object files for the DS
+library.  These object directories are automatically created when
+needed.  The libraries are placed in PRouST-1.0/lib/${OS}. The value 
+of ${OS} is determined by the script src/common/get_OS.sh. The default
+is to use the output of uname -s. Currently the only exception is that
+SunOS is used for SunOS4.x and SunOS5 is used for Solaris.

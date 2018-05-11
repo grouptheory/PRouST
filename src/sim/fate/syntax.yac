@@ -1,0 +1,1461 @@
+%{
+
+#include <iostream.h>
+#include <DS/containers/dictionary.h>
+#include <common/cprototypes.h>
+
+// general ----------------
+
+#define c_TXTLEN 	 255
+#define c_UNBOUNDED_ARGS 255
+// This may need to be increased later
+#define c_PROC_BODY      65536
+#define c_PROC_DECL      32768
+#define c_PROC_HEAD      16384
+
+extern unsigned char yy_nid[22];
+
+FILE * v_FATE_library_file = 0;
+FILE * v_output = stdout;
+char   v_temp[c_PROC_BODY];
+char   v_global_init[c_PROC_BODY];
+
+#define c_TIMESEQ         1
+#define c_SWITCH_GROUP    2
+#define c_LINK_GROUP      4
+#define c_SWITCH_SELECTOR 8
+#define c_LINK_SELECTOR	  16
+#define c_PROC		  32
+#define c_SWITCH_LOCAL	  64
+#define c_LINK_LOCAL	 128
+
+typedef char * string;
+
+dictionary<string,int> v_global_binding;
+dictionary<string,int> v_local_binding;
+
+extern char * yytext;
+
+// configuration file
+char *v_configFileName = 0;
+
+// primitives ----------------
+
+int v_buf_made;
+int v_special_vis;
+
+// timeseqs ----------------
+
+#define c_PERIODIC 1
+#define c_UNIFORM  2
+#define c_POISSON  3
+#define c_EXPLICIT 4
+#define c_MAX_TS_ARGS    (c_UNBOUNDED_ARGS + 1)
+
+char *v_ts_file;	/* Name of the file that contains the timer values
+			 * There need not be one.
+			 */
+char v_ts_name[c_TXTLEN];
+int v_ts_type;
+int v_num_ts_args, v_arg_loop;
+char v_ts_parms[c_MAX_TS_ARGS][c_TXTLEN];
+double v_ts_parm_val[c_MAX_TS_ARGS];
+
+// groups ----------------
+
+char v_grp_name[c_TXTLEN];
+int v_grp_type;
+
+// selector ----------------
+
+#define c_MAX_CLAUSES  10
+#define c_MAX_LITERALS 10
+
+char v_sel_name[c_TXTLEN];
+char* v_sel_comp[c_MAX_CLAUSES][c_MAX_LITERALS];
+int v_num_clauses;
+int v_num_literals[c_MAX_CLAUSES];
+
+// procedure ----------------
+
+char v_proc_body[c_PROC_BODY];
+char v_proc_decl[c_PROC_DECL];
+char v_proc_head[c_PROC_HEAD];
+
+char v_proc_name[c_TXTLEN];
+int v_indent_level;
+char v_comp_name[c_TXTLEN];
+
+#define c_EXP_LINK 1
+#define c_IMP_LINK 2
+#define c_BW_LINK  3
+int  v_link_type;
+char v_sw1[c_TXTLEN];
+char v_sw2[c_TXTLEN];
+char v_fwd_bw[c_TXTLEN];
+char v_bwd_bw[c_TXTLEN];
+int  v_port1, v_port2, v_agg;
+
+int  v_ports;
+
+int  v_visnum;
+char v_injtext[c_PROC_HEAD];
+char v_visname[c_TXTLEN];
+
+char v_snap_name[c_TXTLEN];
+
+char v_cmd[c_TXTLEN];
+
+#include "functions.h"
+
+%}
+
+%union {
+  /* static char const syntax_yac_rcsid_[] = "$Id: syntax.yac,v 1.94 1999/02/25 16:09:00 mountcas Exp $"; */
+  char * stringval;
+
+/*
+ * struct num holds the text and numeric value of any int or double.
+ * Each time the scanner recognizes a number, it allocates the space 
+ * for the text in digits and copies the text into digits.  Then it 
+ * puts the integer value into intval and the double value into doubleval.
+ *
+ * Remember to free the digits portion when you're finished with it.
+ */
+
+  struct num {
+    char * digits;
+    int    intval;
+    double doubleval;
+  } numberval;
+
+  struct loopy {	/* a loop is: forall(switch foo in bar) {...}
+			 * a loop is: forall(link foo in bar) {...}
+			 * foo is the index
+			 * bar is the group
+			 * The corresponding C++ code for the switch example is
+			 * list_item li_foo;
+			 * SwitchComp *foo;
+			 * forall_items(li_foo, internalbar) {
+			 *  foo = internalbar.inf(li_foo);
+			 *  ...
+			 * }
+			 */
+    char *index;
+    char *group;
+  } loop_args;
+}
+
+/* Begin parsing with the 'language' nonterminal */
+%start language
+
+/* Terminals of no particular type */
+%token _configuration, _begin, _end, _call
+%token _lp, _rp, _lc, _rc, _lb, _rb
+%token _include, _lq, _rq, _slash
+%token _comma, _eq, _eos, _quote, _dollar
+%token _timeseq, _periodic, _uniform, _poisson, _explicit
+%token _selector, _and, _or, _not, _choose
+%token _group, _group_add, _group_rem, _group_clr
+%token _proc_, _forall, _in, _not_in, _if, _else
+%token _switch, _link, _birth, _death, _suspend, _resume
+%token _inject, _with, _snapshot, _exec, _base_, _addr_
+%token _diag, _ofstream, _ifstream
+%token _plugin
+%token _library
+%token _setup
+
+/* Terminals that are numbers */
+%token <numberval> _negfp
+%token <numberval> _posfp
+
+%token <numberval> _negint
+%token <numberval> _posint
+
+/* Terminals that are strings */
+%token <stringval> _nid 
+%token <stringval> _Pid 
+%token <stringval> _quotedstring 
+%token <stringval> _string
+%token <stringval> _verbatim
+
+/* Nonterminals that have specific types */
+%type <loop_args> loop_assign
+%type <loop_args> loop_assign_link
+%type <loop_args> loop_assign_switch
+%type <numberval> number
+%type <stringval> word
+%type <numberval> optional_duration
+
+%%
+
+language:	configuration_declaration
+			{
+			  dump_initial();
+			}
+		optional_includes
+		optional_declarations
+		optional_procedures
+		body
+			{
+			  dump_final();
+			  free(v_configFileName);
+                        }
+		;
+
+configuration_declaration:	_configuration
+			_quotedstring
+			_eos
+			{
+			  v_configFileName = strdup($2);
+			  delete $2;
+			  v_buf_made = v_special_vis = 0;
+			}
+			| 
+			nothing
+			;
+
+/*
+ * Rules for recognizing #include ... 
+ */
+optional_includes:	more_includes { fprintf(v_output,"\n\n"); }
+			| 
+			nothing
+			;
+
+more_includes:	single_include |
+		single_include more_includes
+		;
+
+single_include:	_include 	{ fprintf(v_output,"#include "); }
+		_lq 	 	{ fprintf(v_output,"<"); }
+		filespec	
+		_rq 		{ fprintf(v_output,">\n"); }
+		;
+
+filespec:	word  		{ fprintf(v_output,"%s",$1); free($1); }
+		|
+		word 
+		_slash 		{ fprintf(v_output,"%s/",$1); free($1); }
+		filespec
+		;
+
+/*
+ * Rules for recognizing declarations
+ */
+optional_declarations:	declarations | nothing
+		;
+
+declarations:	declaration |
+		declaration declarations
+		;
+
+declaration:	timeseq_declare |
+		group_declare   |
+		selector_declare |
+		plugin_declare
+		;
+
+timeseq_declare:	_timeseq
+			word 	{ strcpy(v_ts_name,$2); free($2);
+				  bind_name_globally(v_ts_name,c_TIMESEQ);
+				  if (v_ts_file != 0) {
+				    free(v_ts_file);
+				    v_ts_file = 0;
+				  }
+				}
+			_eq 
+			dist	{ v_arg_loop=0; }
+			_lp 
+			dist_parms 
+			_rp	{ if ((v_arg_loop<v_num_ts_args) && (
+					v_num_ts_args!=c_UNBOUNDED_ARGS))
+				   yyerror("Too few arguments in "
+						"timeseq declaration");
+				}
+			_eos 	{ dump_timeseq();
+				}
+			;
+
+dist:	_periodic { v_num_ts_args = 3;  v_ts_type=c_PERIODIC; } |
+	_uniform  { v_num_ts_args = 3;  v_ts_type=c_UNIFORM;  } |
+	_poisson  { v_num_ts_args = 3;  v_ts_type=c_POISSON;  } |
+	_explicit { v_num_ts_args = c_UNBOUNDED_ARGS; v_ts_type=c_EXPLICIT; }
+	;
+
+dist_parms:	numeric_dist_parms
+		|
+		_quotedstring {
+			  v_ts_file = strdup($1);
+			  free($1);
+		}
+		|
+		_quotedstring _comma numeric_dist_parms {
+			  v_ts_file = strdup($1);
+			  free($1);
+		}
+		;
+
+numeric_dist_parms:	number 	{ strcpy(v_ts_parms[v_arg_loop], $1.digits);
+				  v_ts_parm_val[v_arg_loop]=$1.doubleval;
+				  free($1.digits);
+				  v_arg_loop++; 
+				  if ((v_arg_loop>v_num_ts_args) && 
+					(v_num_ts_args!=c_UNBOUNDED_ARGS))
+				    yyerror("Too many arguments in "
+						"timeseq declaration"); }
+		|
+		number	 	{ strcpy(v_ts_parms[v_arg_loop], $1.digits);
+				  v_ts_parm_val[v_arg_loop]=$1.doubleval;
+				  free($1.digits);
+				  v_arg_loop++; 
+				  if ((v_arg_loop>v_num_ts_args) && 
+					(v_num_ts_args!=c_UNBOUNDED_ARGS))
+				    yyerror("Too many arguments in "
+						"timeseq declaration"); }
+		_comma
+		numeric_dist_parms
+		;
+
+group_declare:	_group
+		word		{ strcpy(v_grp_name,$2); free($2); }
+		_eq
+		_lc
+		grp_component_type
+		_rc
+		_eos		{ dump_group(); }
+		;
+
+grp_component_type:	_switch	{ v_grp_type = c_SWITCH_GROUP; 
+				bind_name_globally(v_grp_name,c_SWITCH_GROUP);}
+			|
+			_link	{ v_grp_type = c_LINK_GROUP;
+				 bind_name_globally(v_grp_name,c_LINK_GROUP); }
+			;
+
+selector_declare:	_selector
+			word		{ strcpy(v_sel_name,$2); free($2); }
+			_eq
+			_lb		{ v_num_clauses=0; }
+			dnf
+			_rb
+			_eos		{ dump_selector(); }
+			;
+
+dnf:	_lp			{ v_num_literals[v_num_clauses]=0; }
+	cnf
+	_rp			{ v_num_clauses++; }
+	|
+	dnf _or
+	_lp			{ v_num_literals[v_num_clauses]=0; }
+	 cnf
+	_rp	 		{ v_num_clauses++; }
+	;
+
+cnf:	literal			{ v_num_literals[v_num_clauses]++; }
+	|
+	literal			{ v_num_literals[v_num_clauses]++; }
+	_and 
+	cnf
+	;
+
+literal:	word 	{ 
+	/* LEAK_ASSIGN */
+	delete [] v_sel_comp[v_num_clauses][v_num_literals[v_num_clauses]];
+        v_sel_comp[v_num_clauses][v_num_literals[v_num_clauses]] = 
+		new char [2+strlen($1)];
+	strcpy(v_sel_comp[v_num_clauses][v_num_literals[v_num_clauses]], $1);
+	free($1);
+			}
+		|
+		_not word	{ 
+
+	v_sel_comp[v_num_clauses][v_num_literals[v_num_clauses]] = 
+		new char [2+strlen($2)];
+
+	strcpy(1+v_sel_comp[v_num_clauses][v_num_literals[v_num_clauses]], $2);
+
+	(v_sel_comp[v_num_clauses][v_num_literals[v_num_clauses]])[0]='!';
+
+	free($2);
+				}
+
+		;
+
+/*
+ * Four flavors of plugin declaration
+ *
+ * Declare a plugin prefix for plugins from a library with the default name.
+ *
+ *	plugin word;
+ *
+ *	"word" is the prefix.  The plugin functions come from "libword.so".
+ *	At run-time, the program looks for wordLogosConsruct() and
+ *	wordACACPolicyConstruct() in the library.
+ *
+ * Declare a plugin prefix for plugins from a library with a different
+ * name than the default.
+ *
+ *	plugin word = 'string';
+ *
+ *	"word" is the prefix.  The functions come from the library named
+ *	"string".
+ *
+ * Declare a plugin prefix for plugins from a library to be named 
+ * when the C++ compiler is invoked.
+ *
+ *	plugin word = other_word;
+ *
+ *	"word" is the prefix.  The functions come from the library whose
+ *	name is contained in the compile-time constant "other_word".
+ *
+ * Declare a library for linking.  Write the name of the library to
+ * the file v_FATE_library_file.  Each such declaration gets its own
+ * line in the file.  main() opens and closes the file.
+ */
+plugin_declare:	_plugin 
+		word 
+		_eos {	sprintf(v_temp, "RegisterPlugins(\"%s\");\n", $2);
+			free($2);
+			dump_indent(v_global_init);
+			strcat(v_global_init,v_temp);
+		     }
+		|
+		_plugin 
+		word
+		_eq
+		_quotedstring
+		_eos  { sprintf(v_temp, "RegisterPlugins(\"%s\", \"%s\");\n",
+				$2, $4);
+			dump_indent(v_global_init);
+			strcat(v_global_init,v_temp);
+			free($4);
+			free($2);
+			}
+		|
+		_library _quotedstring _eos
+		{
+		  fprintf(v_FATE_library_file, "%s\n", $2);
+		  free($2);		  
+		}
+		;
+
+/*
+ * Rules for recognizing procedures
+ */
+optional_procedures:	procedures | nothing
+		;
+
+procedures:	procedure		|
+		procedure procedures
+		;
+
+procedure: _verbatim		{ fprintf(v_output, 
+					  "//----- BEGIN Verbatim -----\n");
+				  fprintf(v_output, "%s", $1);
+				  free($1);
+				  fprintf(v_output, 
+					  "//----- END Verbatim -----\n");
+				}
+	|	_proc_
+		word		{ strcpy(v_proc_body, "");
+				  strcpy(v_proc_head, "");
+				  strcpy(v_proc_name,$2); free($2);
+				  bind_name_globally(v_proc_name,c_PROC); 
+				  sprintf(v_temp,
+					  "//--------- procedure %s ----------\n",
+					  v_proc_name);
+				  strcat(v_proc_head,v_temp);
+				  sprintf(v_temp,"void internal_%s(void)\n", 
+					  v_proc_name);
+				  strcat(v_proc_head, v_temp);
+				  v_indent_level = 0;
+				  v_visnum = 0;
+				  
+				  dic_item di;
+				  forall_items(di, v_local_binding) {
+					free( v_local_binding.key(di) );
+				  }	
+				  v_local_binding.clear();
+
+				  sprintf(v_proc_decl, "  cout << \"At time \""
+					  " << (theKernel().CurrentElapsedTime())\n"
+					  "       << \", executing procedure %s.\" << endl;\n\n",
+					  v_proc_name);
+				}
+		block		{ fprintf(v_output, "%s%s%s\n",
+					  v_proc_head, v_proc_decl, v_proc_body);
+				}
+		;
+
+block:	_lc			{ sprintf(v_temp,"{\n");
+				  if (v_indent_level == 0) {
+				    dump_indent(v_proc_head);
+				    strcat(v_proc_head, v_temp);
+				  } else {
+				    dump_indent(v_proc_body);
+				    strcat(v_proc_body, v_temp);
+				  }
+				  v_indent_level++;
+				}
+	optional_atomics_list
+	_rc			{ v_indent_level--;
+				  dump_indent(v_proc_body);
+				  sprintf(v_temp,"}\n");
+				  strcat(v_proc_body, v_temp);
+				}
+	;
+
+optional_atomics_list:	atomics_list |  nothing
+			;
+
+atomics_list:	atomic 		|
+		atomic atomics_list
+		;
+
+atomic:		_eos			|
+		link_assign		|
+		switch_assign		|
+		death_switch		|
+		death_link		|
+		injection		|
+		group_manipulation	|
+		quick_snapshot		|
+		loop			|
+		conditional		|
+		execution		|
+		stream_decl		|
+		suspend_switch		|
+		suspend_link		|
+		resume_switch		|
+		resume_link		|
+		set_diag		|
+		call			|
+		setup			|
+		_verbatim		{ // XXX DANGER! This could write
+					  // XXX beyond the end of v_proc_body
+					  strcat(v_proc_body,
+					  "//----- BEGIN Verbatim -----\n");
+					  strcat(v_proc_body, $1);
+				  	  free($1);
+					  strcat(v_proc_body,
+					  "//----- END Verbatim -----\n");
+					}
+		;
+
+link_assign:	declare_link _eq link_rvalue
+		;
+
+link_rvalue:	new_link | choose_link
+		;
+
+declare_link:	_link   word	{ strcpy(v_comp_name, $2); free($2);
+				  if (is_locally_defined(v_comp_name)){
+				    sprintf(v_temp,
+					    "Attempt to re-declare variable '%s' in procedure '%s'",
+					    v_comp_name,v_proc_name);
+				    yyerror(v_temp);
+				  }
+				  bind_name_locally(v_comp_name, c_LINK_LOCAL);
+				  /* sprintf(v_temp, "  LinkComp * %s = 0L;\n",
+						v_comp_name); 
+				  strcat(v_proc_decl,v_temp); */
+  				  dump_indent(v_proc_body);
+				  /* sprintf(v_temp,"%s = ",v_comp_name); */
+				  sprintf(v_temp, "LinkComp * %s =", v_comp_name);
+				  strcat(v_proc_body, v_temp);
+  				  dump_indent(v_proc_body);
+				}
+		;
+
+switch_assign:	declare_switch _eq switch_rvalue
+		;
+
+switch_rvalue:	new_switch | choose_switch
+		;
+
+declare_switch:	_switch word 	{ strcpy(v_comp_name, $2); free($2);
+				  if (is_locally_defined(v_comp_name)) {
+				    sprintf(v_temp,
+					    "Attempt to re-declare variable '%s' in procedure '%s'",
+					    v_comp_name,v_proc_name);
+				    yyerror(v_temp);
+				  }
+				  bind_name_locally(v_comp_name, c_SWITCH_LOCAL);
+				  dump_indent(v_proc_body);
+				  sprintf(v_temp, "SwitchComp * %s =", v_comp_name);
+				  strcat(v_proc_body, v_temp);
+				  dump_indent(v_proc_body);
+				}
+			;
+
+set_diag:	_diag
+		word
+		word
+		_eos	{ dump_indent(v_proc_body);
+			  sprintf(v_temp, "DiagLevel(%s, %s);\n", $2, $3);
+			  strcat(v_proc_body, v_temp);
+			  dump_indent(v_proc_body);
+			  free($3);
+			  free($2);
+			}
+		;
+
+new_switch:	_birth 
+		_switch 
+		_lp
+		new_kind_of_switch
+;
+
+new_kind_of_switch: _quotedstring _rp _eos
+		{ sprintf(v_temp,"internal_maker.MakeSwitch(\"%s\");\n",
+				$1); 
+		  strcat(v_proc_body,v_temp);
+		  dump_indent(v_proc_body);
+		  sprintf(v_temp, "if (%s != 0)\n    "
+			  "DIAG(\"sim.fate\", DIAG_DEBUG, cout << \"Allocated switch \" << "
+			  "%s->getName() << \" (\" << "
+			  "*(%s->getNodeID()) << \")\" << endl\n         << \"\tusing "
+			  "configuration key \\\"%s\\\"\"<< endl);\n\n",
+			  v_comp_name, v_comp_name,
+			  v_comp_name, $1);
+		  strcat(v_proc_body,v_temp);
+		}
+		| _quotedstring _comma _Pid _rp _eos 
+		{ sprintf(v_temp,
+			  "internal_maker.MakeSwitch(\"%s\", \"%s\");\n",
+			   $1, $3); 
+		  strcat(v_proc_body,v_temp);
+		  dump_indent(v_proc_body);
+		  sprintf(v_temp, "if (%s != 0)\n    "
+			  "DIAG(\"sim.fate\", DIAG_DEBUG, cout << \"Allocated switch \" << "
+			  "%s->getName() << \" (\" << "
+			  "*(%s->getNodeID())\n         << \") using "
+			  "configuration key \\\"%s\\\" peer group %s\"<< endl);\n\n",
+			  v_comp_name, v_comp_name,
+			  v_comp_name, $1, $3);
+		  strcat(v_proc_body,v_temp);
+		  free($1);
+		  free($3);
+		}
+
+;
+
+
+
+new_link:	_birth
+		_link
+		_lp 
+		kind_of_link
+;
+
+kind_of_link: explicit_link
+		| implicit_link
+;
+
+explicit_link: word _comma number _comma word _comma number 
+		{
+		   sprintf(v_temp,
+			    "internal_maker.MakeLink(%s, %d, %s, %d",
+			    $1, $3.intval, $5, $7.intval);
+
+		}
+		link_tail
+		{
+		  dump_indent(v_proc_body);
+		  sprintf(v_temp, "if (%s != 0)\n    "
+			  "DIAG(\"sim.fate\", DIAG_DEBUG, cout << \"Allocated link %s ( \" << "
+			  "%s->getName() << \" ) between switches \"\n         << "
+			  "%s->getName() << \" and \" << "
+			  "%s->getName() << \".\" << endl);\n\n",
+			  v_comp_name, v_comp_name, v_comp_name,
+			  $1, $5);
+		  strcat(v_proc_body,v_temp);
+		  free($1); free($5); free($3.digits); free($7.digits);
+		}
+;
+
+link_tail:  _comma  _quotedstring _comma _quotedstring _rp _eos
+		{
+		  strcat(v_proc_body,v_temp);	
+		  sprintf(v_temp, ", \"%s\", \"%s\");\n", $2, $4);
+		  free($2); free($4); 
+		  strcat(v_proc_body, v_temp);
+		}
+		| _comma  _quotedstring _rp _eos
+		{
+		  strcat(v_proc_body,v_temp);	
+		  sprintf(v_temp, ", \"%s\");\n", $2); 
+		  free($2); 
+		  strcat(v_proc_body, v_temp);
+		}
+		| _rp _eos
+		{
+		  strcat(v_temp, ");\n");
+		  strcat(v_proc_body, v_temp);
+		}
+;
+
+implicit_link: word _comma word 
+		{
+		   sprintf(v_temp,
+			    "internal_maker.MakeLink(%s, %s", $1, $3);
+
+		}
+		link_tail
+		{
+		  dump_indent(v_proc_body);
+		  sprintf(v_temp, "if (%s != 0)\n    "
+			  "DIAG(\"sim.fate\", DIAG_DEBUG, cout << \"Allocated link %s ( \" << "
+			  "%s->getName() << \" ) between switches \"\n         << "
+			  "%s->getName() << \" and \" << "
+			  "%s->getName() << \".\" << endl);\n\n",
+			  v_comp_name, v_comp_name, v_comp_name,
+			  $1, $3);
+		  strcat(v_proc_body,v_temp);
+		  free($1); free($3);
+		}
+;
+
+
+choose_switch:	_choose word	{ strcpy(v_sel_name, $2); free($2);
+				  if (is_globally_defined(v_sel_name) ==
+				      c_SWITCH_SELECTOR) {
+				    v_grp_type = c_SWITCH_SELECTOR;
+				    sprintf(v_temp, "internal_%s();\n", v_sel_name);
+				    strcat(v_proc_body, v_temp);
+				  } else if (is_globally_defined(v_sel_name) ==
+						c_LINK_SELECTOR) {
+				    v_grp_type=c_LINK_SELECTOR;
+				    sprintf(v_temp,"Assigning switch '%s' "
+					    "using link selector '%s' in procedure '%s'",
+					    v_comp_name, v_sel_name, 
+					    v_proc_name);
+				    yyerror(v_temp);
+				  } else {
+				    sprintf(v_temp,"Assigning switch '%s' "
+					    "using unknown selector '%s' in procedure '%s'",
+					    v_comp_name, v_sel_name,
+					    v_proc_name);
+				    yyerror(v_temp);
+				  }
+				}
+		_eos
+		;
+/* Here I would like to add the selection ability to choose */
+
+choose_link:	_choose word	{ strcpy(v_sel_name, $2); free($2);
+				  if (is_globally_defined(v_sel_name) == 
+				      c_LINK_SELECTOR) {
+				    v_grp_type = c_LINK_SELECTOR;
+				    sprintf(v_temp,"internal_%s();\n",v_sel_name);
+				    strcat(v_proc_body,v_temp);
+				  } else if (is_globally_defined(v_sel_name) ==
+					     c_SWITCH_SELECTOR) {
+				    v_grp_type = c_SWITCH_SELECTOR;
+				    sprintf(v_temp,"Assigning link '%s' using "
+					    "switch selector '%s' in procedure '%s'",
+					    v_comp_name, v_sel_name, 
+					    v_proc_name);
+				    yyerror(v_temp);
+				  } else {
+				    sprintf(v_temp,"Assigning link '%s' using "
+					    "unknown selector '%s' in procedure '%s'",
+					    v_comp_name, v_sel_name, 
+					    v_proc_name);
+				    yyerror(v_temp);
+				  }
+				}
+		_eos
+		;
+
+death_switch:	_death _switch 
+		word 		{ strcpy(v_comp_name, $3); free($3);
+				  if (is_locally_defined(v_comp_name) != 
+					c_SWITCH_LOCAL){
+				    sprintf(v_temp,"Unknown switch '%s' "
+					"referred to in death request in procedure '%s'",
+					    v_comp_name,v_proc_name);
+				    yyerror(v_temp);
+				  }
+				}
+		_eos		{ dump_indent(v_proc_body);
+				  sprintf(v_temp, "if (%s) "
+	 				  "printf(\"Deallocating switch %%s ...\\n\", %s->getName());\n"
+					  "internal_maker.KillSwitch(%s);\n", 
+					v_comp_name, v_comp_name, v_comp_name);
+				  strcat(v_proc_body,v_temp);
+				}
+		;
+
+death_link:	_death _link 	
+		word		{ strcpy(v_comp_name, $3); free($3);
+				  if (is_locally_defined(v_comp_name) != 
+					c_LINK_LOCAL){
+				    sprintf(v_temp,"Unknown link '%s' "
+				    "referred to in death request in procedure '%s'",
+					    v_comp_name,v_proc_name);
+				    yyerror(v_temp);
+				  }
+				}
+		_eos		{ dump_indent(v_proc_body);
+				  sprintf(v_temp,"internal_maker.KillLink(%s);\n",
+					v_comp_name);
+				  strcat(v_proc_body,v_temp);
+				}
+		;
+
+suspend_switch:	_suspend	{ sprintf(v_temp,"Suspension of switches not "
+				  "yet supported but appears in procedure '%s'",
+					  v_proc_name);
+				  yyerror(v_temp);
+				}
+/* $4 is word */
+		_switch word optional_duration _eos { free($4);}
+		;
+
+suspend_link:	_suspend _link
+		word		{ strcpy(v_comp_name, $3); free($3);
+				  if (is_locally_defined(v_comp_name) !=
+				      c_LINK_LOCAL) {
+				    sprintf(v_temp, "Unknown link '%s' "
+					    "referred to in susped request "
+					    "in procedure '%s'",
+					    v_comp_name, v_proc_name);
+				    yyerror(v_temp);
+				  }
+				}
+		optional_duration
+		_eos		{ dump_indent(v_proc_body);
+				  sprintf(v_temp, "%s->Disable();\n",
+					  v_comp_name);
+				  strcat(v_proc_body, v_temp);
+				  if ($5.doubleval != -1.0) {
+				    dump_indent(v_proc_body);
+				    sprintf(v_temp, "TimerHandler *"
+				    " %sTimer = new LinkEnabTimer(%s, $5.doubleval);\n",
+				    v_comp_name, v_comp_name);
+				    strcat(v_proc_body, v_temp);
+				    dump_indent(v_proc_body);
+				  }
+				}
+		;
+
+/* XXX Remember to free($1.digits) if optional_duration is a number */
+optional_duration:	number { free($1.digits); }
+			| nothing { $$.doubleval = -1.0; }
+			;
+
+
+resume_switch:	_resume	{ sprintf(v_temp,"Resuming of switches not "
+			  "yet supported but appears in procedure '%s'",
+					  v_proc_name);
+				  yyerror(v_temp);
+				}
+		_switch word _eos { free($4); /* word */ }
+		;
+
+resume_link:	_resume	_link
+		word		{ strcpy(v_comp_name, $3); free($3);
+				  if (is_locally_defined(v_comp_name) !=
+				      c_LINK_LOCAL) {
+				    sprintf(v_temp, "Unknown link '%s' "
+					    "referred to in susped request "
+					    "in procedure '%s'",
+					    v_comp_name, v_proc_name);
+				    yyerror(v_temp);
+				  }
+				}
+		_eos		{ dump_indent(v_proc_body);
+				  sprintf(v_temp, "%s->Enable();\n",
+					  v_comp_name);
+				  strcat(v_proc_body, v_temp);
+				}
+		;
+
+injection:	_inject		
+		word		{ strcpy(v_comp_name, $2); free($2);
+				  if (is_locally_defined(v_comp_name) 
+					!= c_SWITCH_LOCAL) {
+				    sprintf(v_temp, "Unknown switch "
+					"'%s' referred to in injection request " 
+					"in procedure '%s'",
+					    v_comp_name,v_proc_name);
+				    yyerror(v_temp);
+				  }
+				  sprintf(v_visname,"vis_%d", v_visnum);
+				  v_visnum++;
+				}
+		_with
+		word		{ strcpy(v_injtext,"");
+				  if (is_special_vis($5)) {
+				    v_special_vis++;
+				    strcat(v_injtext, "\"");
+				  }
+				  strcat(v_injtext, $5);
+				  free($5);
+				  if (v_special_vis)
+				    strcat(v_injtext, "\"");
+				}
+		_lp		{ if (!v_special_vis) strcat(v_injtext,"("); 
+				  else strcat(v_injtext, ","); }
+		optional_visitor_args
+		_rp		{ if (!v_special_vis) strcat(v_injtext,")"); }
+		_eos		{
+				  if (v_special_vis) {
+				    sprintf(v_temp, "Visitor * %s = "
+					"internal_maker.MakeVisitor(%s);\n", v_visname, v_injtext);
+				    v_special_vis = 0;
+				  } else
+				    sprintf(v_temp,"Visitor * %s = new %s;\n",
+						v_visname,v_injtext);
+				  dump_indent(v_proc_body);
+				  strcat(v_proc_body,v_temp);
+				  dump_indent(v_proc_body);
+				  sprintf(v_temp,"if (%s && %s)\n"
+					  "    %s->AcceptVisitor(%s);\n", 
+						v_comp_name, v_visname, 
+						v_comp_name, v_visname);
+				  strcat(v_proc_body,v_temp);
+				  dump_indent(v_proc_body);
+				  if (v_buf_made) {
+				    v_indent_level--;
+				    strcat(v_proc_body, "}\n");
+				    dump_indent(v_proc_body);
+				    v_buf_made = 0;
+				  }
+				}
+		;
+
+optional_visitor_args:	nothing | visitor_arglist
+			;
+
+visitor_arglist:	visitor_argument
+			|
+			visitor_argument 
+			_comma 			{ strcat(v_injtext,", "); } 
+			visitor_arglist
+			;
+
+visitor_argument:	word		{ if (!v_special_vis) {
+					    if (is_locally_defined($1))
+					      sprintf(v_injtext, 
+						"%s%s->getNodeID()", 
+						 v_injtext, $1);
+					    else
+					      strcat(v_injtext, $1);
+					  } else strcat(v_injtext, $1);
+
+					  free($1);
+					}
+			|
+			number		{ strcat(v_injtext, $1.digits); 
+					  free($1.digits);
+					}
+			|
+			_quote
+			_dollar
+			word	{ if (is_locally_defined($3)) {
+				    dump_indent(v_proc_body);
+				    sprintf(v_temp, 
+					"{ char buf[4096];\n");
+
+				    strcat(v_proc_body, v_temp);
+				    dump_indent(v_proc_body);
+				    v_buf_made++; v_indent_level++;
+				  } else {
+				    sprintf(v_temp, "'%s' is not a "
+					"local variable!", $3); 
+				    free($3);
+				    yyerror(v_temp);
+			          }
+				}
+			_dollar
+			word	{ sprintf(v_temp, 
+				  "sprintf(buf, \"%%s%s\", %s->getName());\n", 
+					   $6, $3);
+				  strcat(v_proc_body, v_temp);
+				  dump_indent(v_proc_body);
+				  strcat(v_injtext, "buf");
+				  free($6);
+				  free($3);
+				}
+			_quote
+			|
+			_quotedstring	{ sprintf(v_injtext, "%s\"%s\"", 
+						v_injtext, $1);
+					  free($1);
+					 }
+			|
+			_quote
+			word
+			_dollar
+			word	{ if (is_locally_defined($4)) {
+				    dump_indent(v_proc_body);
+				    sprintf(v_temp, 
+					"{ char buf[4096];\n");
+				    strcat(v_proc_body, v_temp);
+				    dump_indent(v_proc_body);
+				    v_buf_made++; v_indent_level++;
+				  } else {
+				    sprintf(v_temp, "'%s' is not a "
+						"local variable!", $4);
+				    yyerror(v_temp);
+				    free($4);
+				    free($2);
+				  }
+				}
+			_dollar
+			word
+			_quote	{ sprintf(v_temp, 
+				"sprintf(buf, \"%s%%s%s\", %s->getName());\n", 
+					$2, $7, $4);
+				  strcat(v_proc_body, v_temp);
+				  dump_indent(v_proc_body);
+				  strcat(v_injtext, "buf");
+				  free($7);
+				  free($4);
+				  free($2);
+				}
+			;
+
+group_manipulation:	_group
+			word	{ strcpy(v_grp_name, $2); free($2);
+				  if (is_globally_defined(v_grp_name) ==
+					c_SWITCH_GROUP) 
+				    v_grp_type = c_SWITCH_GROUP;
+				  else if (is_globally_defined(v_grp_name) == 
+					c_LINK_GROUP)
+				    v_grp_type = c_LINK_GROUP;
+				  else {
+				    sprintf(v_temp,"Unknown group '%s' "
+					"referred to in procedure '%s'",
+					    v_grp_name,v_proc_name);
+				    yyerror(v_temp);
+				  }
+
+				}
+			group_ops
+			;
+
+group_ops:	group_add_op | group_rem_op | group_clr_op
+		;
+
+group_add_op:	_group_add
+		word		{ strcpy(v_comp_name, $2); free($2);
+				  if (v_grp_type==c_SWITCH_GROUP) {
+				    if (is_locally_defined(v_comp_name) != 
+					c_SWITCH_LOCAL){
+				      sprintf(v_temp,"Attempt to add "
+					"non-switch '%s' to switch group '%s' in procedure '%s'",
+					      v_comp_name,v_grp_name,
+						v_proc_name);
+				      yyerror(v_temp);
+				    }
+				  }
+				  if (v_grp_type==c_LINK_GROUP) {
+				    if (is_locally_defined(v_comp_name) !=  
+					c_LINK_LOCAL){
+				      sprintf(v_temp,"Attempt to add "
+					"non-link '%s' to link group '%s' in procedure '%s'",
+					      v_comp_name,v_grp_name,
+						v_proc_name);
+				      yyerror(v_temp);
+				    }
+				  }
+				  dump_indent(v_proc_body);
+				  sprintf(v_temp,
+					"internal_maker.AddToGroup(&internal_%s, %s);\n",v_grp_name,v_comp_name);
+				  strcat(v_proc_body,v_temp);
+				}
+		_eos
+		;
+
+group_rem_op:	_group_rem	
+		word		{ strcpy(v_comp_name, $2); free($2);
+				  if (v_grp_type==c_SWITCH_GROUP) {
+				    if (is_locally_defined(v_comp_name) != 
+					c_SWITCH_LOCAL){
+				      sprintf(v_temp,"Attempt to remove "
+					"non-switch '%s' from switch group '%s' in procedure '%s'",
+					      v_comp_name,v_grp_name,
+					v_proc_name);
+				      yyerror(v_temp);
+				    }
+				  }
+				  if (v_grp_type==c_LINK_GROUP) {
+				    if (is_locally_defined(v_comp_name) != 
+					c_LINK_LOCAL){
+				      sprintf(v_temp,"Attempt to remove "
+					"non-link '%s' from link group '%s' in procedure '%s'",
+					      v_comp_name,v_grp_name,
+						v_proc_name);
+				      yyerror(v_temp);
+				    }
+				  }
+				  dump_indent(v_proc_body);
+				  sprintf(v_temp,
+					"internal_maker.RemFromGroup(&internal_%s,%s);\n",
+					v_grp_name,v_comp_name);
+				  strcat(v_proc_body,v_temp);
+				}
+		_eos
+		;
+
+group_clr_op:	_group_clr	{ dump_indent(v_proc_body);
+				  sprintf(v_temp,
+					"internal_maker.ClearGroup(&internal_%s);\n",
+					v_grp_name);
+				  strcat(v_proc_body,v_temp);
+				}
+		_eos
+		;
+
+quick_snapshot:	_snapshot
+		_quotedstring
+		_eos	{ strcpy(v_snap_name, $2); free($2);
+				  dump_indent(v_proc_body);
+				  sprintf(v_temp, "internal_maker.Snap(\"%s\");\n", 
+						v_snap_name);
+				  strcat(v_proc_body, v_temp);
+				  dump_indent(v_proc_body);
+				}
+		;
+
+conditional:	_if condition block	|
+		_if condition block continuation
+		;
+
+continuation:	_else block		|
+		_else conditional
+		;
+
+condition:	_lp 
+		number		{ dump_indent(v_proc_body);
+				  sprintf(v_temp, "if (internal_maker.Toss(%lf))\n",
+					  $2.doubleval);
+				  free($2.digits);
+				  strcat(v_proc_body,v_temp);
+				}
+		_rp
+		
+		;
+
+loop:		_forall _lp loop_assign _rp 
+		_lc 
+			{
+			  sprintf(v_temp,"{\n");
+			  if (v_indent_level == 0) { // Can't happen?
+			    cerr << "Loop: v_indent_level == 0!" << endl;
+			    dump_indent(v_proc_head);
+			    strcat(v_proc_head, v_temp);
+			  } else {
+			    dump_indent(v_proc_body);
+			    strcat(v_proc_body, v_temp);
+			  }
+
+			  dump_indent(v_proc_body);
+			  sprintf(v_temp, "%s = internal_%s.inf(li_%s);\n",
+				  $3.index, $3.group, $3.index);
+			  strcat(v_proc_body, v_temp);
+			  v_indent_level++;
+			  free($3.index);
+			  free($3.group);
+			}
+		optional_atomics_list 
+		_rc
+			{ v_indent_level--;
+				  dump_indent(v_proc_body);
+				  sprintf(v_temp,"}\n");
+				  strcat(v_proc_body, v_temp);
+				}
+
+		;
+
+loop_assign:	loop_assign_switch | loop_assign_link
+		;
+
+loop_assign_switch:	_switch 
+			word	{ strcpy(v_comp_name, $2);
+				  if (is_locally_defined(v_comp_name)){
+				    sprintf(v_temp,"Attempt to re-declare "
+					"variable '%s' in procedure '%s'",
+					    v_comp_name,v_proc_name);
+				    yyerror(v_temp);
+				  }
+				  bind_name_locally(v_comp_name, 
+					c_SWITCH_LOCAL);
+				  sprintf(v_temp,
+					"  SwitchComp * %s = 0L;\n",v_comp_name);
+				  strcat(v_proc_decl, v_temp);
+				  sprintf(v_temp,
+					"  list_item li_%s = 0L;\n",v_comp_name);
+				  strcat(v_proc_decl, v_temp);
+				  dump_indent(v_proc_body);
+				  sprintf(v_temp, "forall_items(li_%s, ",
+					  v_comp_name);
+				  strcat(v_proc_body,v_temp);
+				}
+			_in 
+			word	{ strcpy(v_grp_name, $5);
+				  if (is_globally_defined(v_grp_name) ==
+					 c_SWITCH_GROUP) {
+				    v_grp_type = c_SWITCH_GROUP;
+				    sprintf(v_temp,"internal_%s)\n", v_grp_name);
+				    strcat(v_proc_body, v_temp);
+				  } else {
+				    sprintf(v_temp,"Looping through non "
+					"switch-group '%s' using switch variable '%s' in procedure '%s'",
+					    v_grp_name,v_comp_name,
+						v_proc_name);
+				    yyerror(v_temp);
+				  }
+				$$.index = $2;
+				$$.group = $5;
+				}
+			;
+
+loop_assign_link:	_link 
+			word 	{ strcpy(v_comp_name, $2);
+				  if (is_locally_defined(v_comp_name)){
+				    sprintf(v_temp,"Attempt to re-declare "
+					"variable '%s' in procedure '%s'",
+					    v_comp_name,v_proc_name);
+				    yyerror(v_temp);
+				  }
+				  bind_name_locally(v_comp_name, 
+					c_SWITCH_LOCAL);
+				  sprintf(v_temp,
+					"  LinkComp * %s = 0L;\n",v_comp_name);
+				  strcat(v_proc_decl, v_temp);
+				  sprintf(v_temp,
+					"  list_item li_%s = 0L;\n",v_comp_name);
+				  strcat(v_proc_decl, v_temp);
+				  dump_indent(v_proc_body);
+				  sprintf(v_temp, "forall_items(li_%s, ",
+					  v_comp_name);
+				  strcat(v_proc_body,v_temp);
+				}
+			_in 
+			word	{ strcpy(v_grp_name, $5);
+				  if (is_globally_defined(v_grp_name) ==
+					c_LINK_GROUP) {
+				    v_grp_type=c_LINK_GROUP;
+				    sprintf(v_temp,"internal_%s) ",v_grp_name);
+				    strcat(v_proc_body,v_temp);
+				  } else {
+				    sprintf(v_temp,"Looping through non "
+					"link-group '%s' using link variable '%s' in procedure '%s'",
+					    v_grp_name,v_comp_name,
+						v_proc_name);
+				    yyerror(v_temp);
+				  }
+				  $$.index = $2;
+				  $$.group = $5;
+				}
+			;
+
+execution:	_exec		{ strcpy(v_cmd,""); }
+		command
+		_eos		{ dump_indent(v_proc_body);
+				  sprintf(v_temp,"system(\"%s\");\n",v_cmd);
+				  strcat(v_proc_body,v_temp);
+				  dump_indent(v_proc_body);
+				}
+			;
+
+stream_decl:	_ofstream
+		word
+                _lp
+		_quotedstring
+		_rp
+		_eos	{ dump_indent(v_proc_body);
+			  sprintf(v_temp, "ofstream %s(", $2);
+			  free($2);
+			  sprintf(v_temp, "%s\"%s\");\n", v_temp, $4);
+			  free($4);
+			  strcat(v_proc_body, v_temp);
+			  dump_indent(v_proc_body);
+			}
+		|
+		_ifstream
+		word
+		_lp
+		_quotedstring
+		_rp
+		_eos		{ dump_indent(v_proc_body);
+				  sprintf(v_temp, "ifstream %s(", $2);
+				  free($2);
+				  sprintf(v_temp, "%s\"%s\");\n", v_temp, $4);
+				  free($4);
+				  strcat(v_proc_body, v_temp);
+				  dump_indent(v_proc_body);
+				}
+		;
+
+command:	nibble
+		|
+		nibble
+		command
+		;
+
+nibble:		word	{ strcat(v_cmd, $1); strcat(v_cmd," "); free($1); }
+		|
+		number	{ strcat(v_cmd,$1.digits); 
+			  free($1.digits);
+			  strcat(v_cmd," "); 
+			}
+		|
+		_rq	{ strcat(v_cmd, ">"); }
+
+		;
+
+/*
+ * Rules for recognizing the body of a program
+ */
+body:	_begin
+	optional_calls
+	_end
+	number	{ sprintf(v_temp, "  theKernel().StopIn(%s);\n", $4.digits);
+		  free($4.digits);
+		  strcat(v_global_init,v_temp); }
+	;
+
+optional_calls:	calls | nothing
+		;
+
+calls:	timeseq_call
+	|
+	call
+	|
+	timeseq_call calls
+	|
+	call calls
+	;
+
+timeseq_call:	word		{ strcpy(v_ts_name, $1); free($1);
+			  if (is_globally_defined(v_ts_name)!=c_TIMESEQ){
+			    sprintf(v_temp,"Unknown timeseq '%s' referred "
+				    "to in procedure call in program body",v_ts_name);
+			    yyerror(v_temp);
+			  }
+			}
+	_call
+	word		{ strcpy(v_proc_name, $4); free($4);
+			  if (is_globally_defined(v_proc_name)!=c_PROC){
+			    sprintf(v_temp,"Unknown proc '%s' referred "
+				    "to in procedure call in program body",v_proc_name);
+			    yyerror(v_temp);
+			  }
+			
+			  sprintf(v_temp,
+			  "  internal_%s.AttachProcedure((void*)&internal_%s);\n",v_ts_name,v_proc_name);
+			  strcat(v_global_init,v_temp);
+			}
+	_eos
+	;
+
+call:	_call
+	word
+	_eos		{ strcpy(v_proc_name, $2); free($2);
+			  if (is_globally_defined(v_proc_name) != c_PROC) {
+			    sprintf(v_temp, "Unknown proc '%x' referred "
+				     "to in procedure call", v_proc_name);
+			    yyerror(v_temp);
+			  }
+			  dump_indent(v_proc_body);
+			  sprintf(v_temp, "internal_%s();\n", v_proc_name);
+			  strcat(v_proc_body, v_temp);	
+			}
+	;
+
+setup:	_setup
+	_lp
+	word
+	_comma
+	word
+	_comma
+	_posint
+	_comma
+	_quotedstring
+	_comma
+	_posfp
+	_rp
+	_eos		{ strcpy( v_sw1, $3 ); free( $3 );
+			  if (is_locally_defined( v_sw1 ) !=
+				c_SWITCH_LOCAL) {
+			    sprintf(v_temp, "Unknown switch "
+				    "'%s' referred to in injection request " 
+				    "in procedure '%s'",
+				    v_sw1, v_proc_name);
+			    yyerror(v_temp);
+			  }
+			  strcpy( v_sw2, $5 ); free( $5 );
+			  if (is_locally_defined( v_sw2 ) !=
+				c_SWITCH_LOCAL) {
+			    sprintf(v_temp, "Unknown switch "
+				    "'%s' referred to in injection request " 
+				    "in procedure '%s'",
+				    v_sw2, v_proc_name);
+			    yyerror(v_temp);
+			  }
+			  /* now for the bandwidth $7 */
+			  /* NOT DONE FOR NOW - mountcas */
+			  strcpy( v_comp_name, $9 ); free( $9 );
+			  if ( strcmp( v_comp_name, "explicit" ) &&
+			       strcmp( v_comp_name, "poisson" ) ) {
+			    sprintf( v_temp, "setup duration type MUST "
+				    "be either 'explicit' or 'poisson', "
+				    "not '%s', which is in procedure '%s'",
+				    v_comp_name, v_proc_name );
+			    yyerror( v_temp );
+			  }
+			  /* finally the duration $11 */
+			  /* NOT DONE FOR NOW - mountcas */
+
+			  /* Now generate the code .. */
+			  sprintf( v_temp, "internal_maker.MakeConnection( %s, %s, %d, %s, %lf );\n",
+				   v_sw1, v_sw2, $7.intval, ( !strcmp(v_comp_name, "explicit" ) ? 
+				   "true" : "false" ), $11.doubleval );
+			  strcat(v_proc_body,v_temp);
+			  dump_indent(v_proc_body);	
+			}
+	|
+	_setup
+	_lp
+	word
+	_comma
+	word
+	_comma
+	word
+	_comma
+	word
+	_comma
+	number
+	_rp
+	_eos		{
+			    sprintf(v_temp, "setup( sw1, sw2, string, type, duration );"
+                                    " in procedure '%s' is unsupported at this time.",
+				    v_proc_name);
+			    yyerror(v_temp);
+			}
+	;
+
+/*
+ * Rules used everywhere: numbers, words, nothing
+ */
+number:		_posint 
+		|
+		_negint 
+		|
+		_posfp  
+		|
+		_negfp  
+		;
+
+word:		_string 
+		;
+
+nothing:	;
+
+%%

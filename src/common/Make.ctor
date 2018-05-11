@@ -1,0 +1,39 @@
+# -*-makefile-*-
+
+CTORMOD = ${shell (PWD=`pwd`; basename $$PWD) }
+
+#*** library sources and associated headers
+CTOR_SRCS = ${CTORMOD}.cc
+CTOR_OBJS = ${OS}_${MODULE}.${OTYPE}
+
+OTHER_DEVS =
+
+override LIB_TYPE=static
+override IS_A_CTOR_LIB = yes
+override USER_EXT = 
+include ../Make.local
+
+
+#*** non-library files that need to be transported 
+#*** to the /src tree when we 'make push'
+OTHERFILES = Makefile
+
+
+echo:	
+	@echo ${CTOR_SRCS}
+	@echo ${LIB_TYPE}
+	@echo ${CTORMOD}
+	@echo ${MODULELIB}
+
+#*** executables, and the library ${MODULELIB}
+all:	library
+	@echo ${MODULE}/${CTORMOD} ctors are ready.
+
+library:	${MODULELIB}(${CTOR_OBJS})
+	@true
+
+clean::
+	rm -rf ${CTOR_OBJS}
+
+distclean::
+	rm -rf *.o *.O

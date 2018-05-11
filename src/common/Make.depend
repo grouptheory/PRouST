@@ -1,0 +1,13 @@
+# -*-makefile-*-# -*-makefile-*-
+
+# if the dependency file does not exist for this OS then make one 
+# we have to touch it before launching the make to avoid recursion
+
+DEPEND_FILE_EXISTS:=${shell \
+	(if [ -f .depend_${OS} ]; then echo YES; else echo NO; fi)}
+
+ifeq (${DEPEND_FILE_EXISTS}, NO)
+  MAKE_DEPEND_FILE:=${shell ( touch ./.depend_${OS}; $(MAKE) depend) }
+endif
+
+include ./.depend_${OS}

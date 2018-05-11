@@ -1,0 +1,28 @@
+/* XPM */
+static const char *stop_icon[] = {
+/* width height num_colors chars_per_pixel */
+"    16    13        4            1",
+/* colors */
+". c #ffc8c8",
+"# c #c0c0c0",
+"a c #ff5e55",
+"b c #ff3333",
+/* pixels */
+"################",
+"################",
+"#####bbbbb######",
+"####bbbbbbab####",
+"###abbbbbbbbb###",
+"###.bbbbbbbbbb##",
+"###.bbbbbbbbbb##",
+"###.bbbbbbbbbb##",
+"###bbbbbbbbbb.##",
+"####bbbbbbbb..##",
+"#####bbbbbb.####",
+"#######....#####",
+"################"
+};
+
+
+
+
